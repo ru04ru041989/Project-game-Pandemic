@@ -3,10 +3,12 @@ import os
 import pygame as pg
 
 from settings import Settings
-from feature import City, Player, InfectionCard
-from img import WorldMap, grid
-
 import function as fn
+
+from img import WorldMap, grid
+from feature import City, Player, InfectionCard
+from feature import Scientist
+
 
 
 pg.init()
@@ -49,30 +51,31 @@ InfectionCard = InfectionCard(cities_ls)
 initial_game_setting_done = False
 
 play_setup_reset, play_setup_done = False, False
-player_number = 0
 pos_input = []
 
+max_player = 4
+setting_para = (160,250,670)
+input_box = fn.InputBox(settings.screen_width // 2 + 220, 150, 50, 32)
+
+clock = pg.time.Clock()
+# initial setting loop
 while not play_setup_done:
     screen.fill(bg_color)
     
-    player_number = fn.player_setup(screen, pos_input, player_number)
-    
-    play_setup_reset, play_setup_done = fn.player_confirm(screen, pos_input)
-    
     if play_setup_reset:
-        player_number = 0
         pos_input = []
+        input_box.text = ''    
     
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            sys.exit()
-        
-        elif event.type == pg.MOUSEBUTTONDOWN:
-            pos_input = pg.mouse.get_pos()
-        
-    pg.display.flip()
+    play_setup_reset, play_setup_done, player_number = \
+        fn.player_setup(screen, input_box, pos_input, setting_para, max_player)
+    
+    pg.display.update() 
 
-    
+
+print(player_number) 
+
+# setup player
+
 # game loop
 while True:
     # game display setting
@@ -119,4 +122,4 @@ while True:
     # visualiaze the window
     pg.display.flip()
 
-
+pg.quit()

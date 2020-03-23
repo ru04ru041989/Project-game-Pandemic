@@ -10,6 +10,7 @@ class City():
         self.pos = (x,y)
         self.link = []
         self.txt_up = txt_up
+        self.img_size = (25,25)
         
         # how many disease cube in the city (Max = 3)
         self.dis = {'r':[], 'b':[], 'k':[], 'y':[]}
@@ -41,7 +42,7 @@ class City():
         
     def draw_city_label(self, screen, cityname):
         image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
-        image = pg.transform.scale(image,(25,25))
+        image = pg.transform.scale(image,self.img_size)
         screen.blit(image, (self.pos[0]-5, self.pos[1]-4))
         
         font = pg.font.SysFont('Arial',12, bold = True)
@@ -80,17 +81,35 @@ class PlayerCard():
         pass
 
 class Player():
-    def __init__(self, city):
+    def __init__(self, city, playerNO):
+        # drawing para
+        self.img_size = (16,20)
+        self.angle = 45 + 40*int(playerNO)
+        
+        x,y = city.pos
+        if int(playerNO) == 1:
+            self.pos = [x -self.img_size[0] ,y -self.img_size[1]]
+        elif int(playerNO) == 2:
+            self.pos = [x -self.img_size[0] + self.img_size[0]*1.2 ,y -self.img_size[1]]
+        elif int(playerNO) == 3:
+            self.pos = [x -self.img_size[0] + self.img_size[0]*2.4 ,y -self.img_size[1]]
+        elif int(playerNO) == 4:
+            self.pos = [x + city.img_size[0], y ]
+        elif int(playerNO) == 5:
+            self.pos = [x + city.img_size[0] ,y + city.img_size[1]]    
+        elif int(playerNO) == 6:
+            self.pos = [x + city.img_size[0] - self.img_size[0]*1.2 ,y + city.img_size[1]]    
+
+        # basic para
         self.city = city
         self.action = 4
         self.hand = []
-        # might change base on charactor
+        # might change base on character
         self.handlimit = 7
         self.vaccine_need = 5
         self.building_need = True
         self.supercure = False
         self.sharelock = True
-        
 
     def move(self):
         pass
@@ -124,4 +143,27 @@ class Player():
     
     def draw_player_map(self, screen):
         # draw player on the map
-        pass
+        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color +'.png')
+        image = pg.transform.scale(self.img_size)
+        image = pg.transform.rotate(image, self.angle)
+        screen.blit(image, self.pos)
+
+
+class Scientist(Player):
+    def __init__(self, city):
+        super().__init__(city)
+        self.color = 'grey'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color + '.png')
+        
+        # character ability
+        self.vaccine_need = 4
+        
+class Researcher(Player):
+    def __init__(self, city):
+        super().__init__(city)
+        self.color = 'yellow'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color + '.png')
+        
+        # character ability
+        self.sharelock = False
+        

@@ -30,74 +30,113 @@ def text_setup(text, pos, size = 48, bg_color = settings.bg_color):
     textRect.center = pos
     return txt, textRect
 
-def player_setup(screen, pos_input, player_number):
-    # let user decise how many players
-        # display option: form 2-4
-        # display charactor for choose
-            # if choose less then players, randomly fill up
-    
-    Q1, Q1Rect = text_setup('How many player?', (settings.screen_width // 2, 60))
-    Q2, Q2Rect = text_setup('Please choose charactors, if not enougth, will fill up randonly', 
-                            (settings.screen_width // 2, 250))
-    
-    A11, A11Rect = text_setup('  2  ', ((settings.screen_width // 2) - 100, 180), 
-                              36, bg_color=settings.WHITE)
-    A12, A12Rect = text_setup('  3  ', ((settings.screen_width // 2) , 180), 
-                              36, bg_color=settings.WHITE)
-    A13, A13Rect = text_setup('  4  ', ((settings.screen_width // 2) + 100, 180), 
-                              36, bg_color=settings.WHITE)
-    player_number = player_number
-    if pos_input or player_number:
-        if pos_input[1] <= 180+20 and pos_input[1] >= 180-20 or player_number:
-            if (pos_input[0] >= (settings.screen_width // 2) -120 and \
-                pos_input[0] <= (settings.screen_width // 2) -80) or player_number == 2:
-                A11, A11Rect = text_setup('  2  ', ((settings.screen_width // 2) - 100, 180), 
-                                                36, bg_color=settings.GREEN)
-                player_number = 2
-                
-            elif (pos_input[0] >= (settings.screen_width // 2) -20 and \
-                pos_input[0] <= (settings.screen_width // 2) +20) or player_number == 3:
-                A12, A12Rect = text_setup('  3  ', ((settings.screen_width // 2) , 180), 
-                                                36, bg_color=settings.GREEN)
-                player_number = 3
-                
-            elif (pos_input[0] >= (settings.screen_width // 2) +80 and \
-                pos_input[0] <= (settings.screen_width // 2) +120) or player_number == 4:
-                A13, A13Rect = text_setup('  4  ', ((settings.screen_width // 2) + 100, 180), 
-                                                36, bg_color=settings.GREEN)
-                player_number = 4           
-    
-    screen.blit(Q1, Q1Rect)
-    screen.blit(Q2, Q2Rect)
-    screen.blit(A11, A11Rect)  
-    screen.blit(A12, A12Rect)  
-    screen.blit(A13, A13Rect)
-    
-    return player_number
+def player_confirm(screen, footer_y, pos_input):
 
-
-def player_confirm(screen, pos_input):
-    clear_text, clear_Rect = text_setup(' clear ', ((settings.screen_width // 2) - 300, 670), 
-                              36, bg_color=settings.WHITE)
-    next_text, next_Rect = text_setup(' next ', ((settings.screen_width // 2) + 300, 670), 
-                              36, bg_color=settings.WHITE)
-    
     play_setup_done = False
     play_setup_reset = False
     
     if pos_input:
         
-        if pos_input[1] <= 670+20 and pos_input[1] >= 670-20:
+        if pos_input[1] <= footer_y + 20 and pos_input[1] >=  footer_y - 20:
             if pos_input[0] >= (settings.screen_width // 2) - 300 - 40 and\
                 pos_input[0] <= (settings.screen_width // 2) - 300 + 40:
                     play_setup_reset = True        
         
-        if pos_input[1] <= 670+20 and pos_input[1] >= 670-20:
+        if pos_input[1] <= footer_y+20 and pos_input[1] >= footer_y-20:
             if pos_input[0] >= (settings.screen_width // 2) + 300 - 40 and\
                 pos_input[0] <= (settings.screen_width // 2) + 300 + 40:
                     play_setup_done = True
     
+    return play_setup_reset, play_setup_done
+
+def player_setup(screen, input_box, pos_input, setting_para, max_player):
+    Q1_y, Q2_y = setting_para[:2]
+    footer_y = setting_para[-1]
+    
+    Q1, Q1Rect = text_setup('How many player?  (Max = ' + str(max_player) + ')', 
+                            (settings.screen_width // 2 - 100, Q1_y))
+    Q2, Q2Rect = text_setup('Please choose charactors, if not enougth, will fill up randonly', 
+                            (settings.screen_width // 2, Q2_y))
+    clear_text, clear_Rect = text_setup(' clear ', ((settings.screen_width // 2) - 300, footer_y), 
+                              36, bg_color=settings.WHITE)
+    next_text, next_Rect = text_setup(' next ', ((settings.screen_width // 2) + 300, footer_y), 
+                              36, bg_color=settings.WHITE)
+    
+    events = pg.event.get()
+    for event in events:
+        if event.type == pg.QUIT:
+            pg.quit()
+        
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            pos_input = pg.mouse.get_pos()
+    
+        input_box.handle_event(event)
+        
+    input_box.update()
+    
+    input_box.draw(screen)
+    screen.blit(Q1, Q1Rect)
+    screen.blit(Q2, Q2Rect)
     screen.blit(clear_text, clear_Rect)
     screen.blit(next_text, next_Rect)
     
-    return play_setup_reset, play_setup_done
+    play_setup_reset, play_setup_done = player_confirm(screen, footer_y, pos_input)
+        
+    try:
+        player_number =  int(input_box.text)
+        if player_number > max_player:
+            play_setup_done = False
+    except:
+        player_number = 0
+        play_setup_done = False
+    
+    return  play_setup_reset, play_setup_done, player_number
+
+
+pg.init()
+FONT = pg.font.Font(None, 32)  
+class InputBox:
+
+    def __init__(self, x, y, w, h, text=''):
+        self.rect = pg.Rect(x, y, w, h)
+        self.color = pg.Color('lightskyblue3')
+        self.text = text
+        self.txt_surface = FONT.render(text, True, self.color)
+        self.active = False
+
+    def handle_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
+                # Toggle the active variable.
+                self.active = not self.active
+            else:
+                self.active = False
+            # Change the current color of the input box.
+            self.color = pg.Color('dodgerblue2') if self.active else pg.Color('lightskyblue3')
+        if event.type == pg.KEYDOWN:
+            if self.active:
+                if event.key == pg.K_RETURN:
+                    print(self.text)
+                    self.text = ''
+                elif event.key == pg.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    self.text += event.unicode
+                # Re-render the text.
+                self.txt_surface = FONT.render(self.text, True, self.color)
+
+    def update(self):
+        # Resize the box if the text is too long.
+        width = max(200, self.txt_surface.get_width()+10)
+        self.rect.w = width
+
+    def draw(self, screen):
+        # Blit the text.
+        screen.blit(self.txt_surface, (self.rect.x+20, self.rect.y+5))
+        # Blit the rect.
+        pg.draw.rect(screen, self.color, self.rect, 2)
+        
+
+
+
