@@ -3,6 +3,8 @@ import string
 import random
 import pygame as pg
 
+import color as color
+
 class City():
     def __init__(self, color, x, y, txt_up):
         # link: list of the city linked
@@ -81,36 +83,57 @@ class PlayerCard():
         pass
 
 class Player():
-    def __init__(self, city, playerNO):
+    def __init__(self):
         # drawing para
-        self.img_size = (16,20)
-        self.angle = 45 + 40*int(playerNO)
+        self.img_size = [16,20]
+        self.angle = 0
+        self.pos = [0,0]
+        self.playerNO = 0
         
-        x,y = city.pos
-        if int(playerNO) == 1:
-            self.pos = [x -self.img_size[0] ,y -self.img_size[1]]
-        elif int(playerNO) == 2:
-            self.pos = [x -self.img_size[0] + self.img_size[0]*1.2 ,y -self.img_size[1]]
-        elif int(playerNO) == 3:
-            self.pos = [x -self.img_size[0] + self.img_size[0]*2.4 ,y -self.img_size[1]]
-        elif int(playerNO) == 4:
-            self.pos = [x + city.img_size[0], y ]
-        elif int(playerNO) == 5:
-            self.pos = [x + city.img_size[0] ,y + city.img_size[1]]    
-        elif int(playerNO) == 6:
-            self.pos = [x + city.img_size[0] - self.img_size[0]*1.2 ,y + city.img_size[1]]    
-
         # basic para
-        self.city = city
-        self.action = 4
+        self.city = ''
         self.hand = []
+        
         # might change base on character
+        self.action = 4
         self.handlimit = 7
-        self.vaccine_need = 5
-        self.building_need = True
-        self.supercure = False
+        self.cure_need = 5
+        self.building_action = True
+        self.supertreat = False
         self.sharelock = True
+        self.move_other = False
 
+    def playerNO_update(self, playerNO):
+        self.playerNO = playerNO
+        self.angle = 45 - 40*(int(playerNO) -1)
+
+    def city_update(self, city):
+        self.city = city
+        x,y = city.pos
+        if int(self.playerNO) == 1:
+            self.pos = [x -self.img_size[0] - self.img_size[0]*0.2,
+                        y -self.img_size[1] - self.img_size[1]*0.1]
+            
+        elif int(self.playerNO) == 2:
+            self.pos = [x -self.img_size[0] + self.img_size[0]*1.2 ,
+                        y -self.img_size[1] - self.img_size[1]*0.2]
+            
+        elif int(self.playerNO) == 3:
+            self.pos = [x -self.img_size[0] + self.img_size[0]*1.9 ,
+                        y -self.img_size[1] - self.img_size[1]*0.1] 
+            
+        elif int(self.playerNO) == 4:
+            self.pos = [x + city.img_size[0] - self.img_size[0]*0.6, 
+                        y ]
+            
+        elif int(self.playerNO) == 5:
+            self.pos = [x + city.img_size[0] - self.img_size[0], 
+                        y + city.img_size[1] - self.img_size[1]*0.6]
+                
+        elif int(self.playerNO) == 6:
+            self.pos = [x + city.img_size[0] - self.img_size[0]*1.2 ,
+                        y + city.img_size[1]]    
+        
     def move(self):
         pass
     
@@ -120,7 +143,7 @@ class Player():
     def research(self):
         pass
     
-    def cure(self, cur_city, dis, is_vaccine):
+    def treat(self, cur_city, dis, is_vaccine):
         pass
     
     def share(self):
@@ -143,27 +166,69 @@ class Player():
     
     def draw_player_map(self, screen):
         # draw player on the map
-        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color +'.png')
-        image = pg.transform.scale(self.img_size)
+        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab +'.png')
+        image = pg.transform.scale(image, self.img_size)
         image = pg.transform.rotate(image, self.angle)
         screen.blit(image, self.pos)
 
 
 class Scientist(Player):
-    def __init__(self, city):
-        super().__init__(city)
-        self.color = 'grey'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color + '.png')
-        
+    def __init__(self):
+        super().__init__()
+        self.color_lab = 'grey'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
+        self.color = color.Scientist
+        self.key = 'Scientist'
+        self.discribe = ['Need only four card for cure']        
         # character ability
-        self.vaccine_need = 4
+        self.cure_need = 4
         
 class Researcher(Player):
-    def __init__(self, city):
-        super().__init__(city)
-        self.color = 'yellow'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color + '.png')
-        
+    def __init__(self):
+        super().__init__()
+        self.color_lab = 'yellow'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
+        self.color = color.Researcher
+        self.key = 'Researcher'
+        self.discribe = ['Give a player card from your hand for one action', 
+                            'Both of you need to be at the same city'] 
         # character ability
         self.sharelock = False
         
+class Medic(Player):
+    def __init__(self):
+        super().__init__()
+        self.color_lab = 'orange'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
+        self.color = color.Medic
+        self.key = 'Medic'
+        self.discribe = ['Remove all the same disease in the city when you treat',
+                       'If the cure is found, no need to cause for treat']        
+        # character ability
+        self.supertreat = False
+
+class Dispatcher(Player):
+    def __init__(self):
+        super().__init__()
+        self.color_lab = 'purple'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
+        self.color = color.Dispatcher
+        self.key = 'Dispatcher'
+        self.discribe = ["Move other player in your turn ",
+                        "Move any player to another player's city for one action"]         
+        # character ability
+        self.move_other = True
+        
+class OperationsExpert(Player):
+    def __init__(self):
+        super().__init__()
+        self.color_lab = 'lightgreen'
+        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
+        self.color = color.OperationsExpert
+        self.key = 'Operations Expert'
+        self.discribe = ['Build a research station in your city with one action']         
+        # character ability
+        self.building_action = True
+
+
+

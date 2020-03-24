@@ -5,6 +5,7 @@ import pygame as pg
 
 from feature import City, Player
 from settings import Settings
+import color as color
 
 settings = Settings()
 
@@ -54,7 +55,7 @@ def player_setup(screen, input_box, chara_box, pos_input, setting_para, max_play
     Q2, Q2Rect = text_setup('Please choose charactors, if not enougth, will fill up randonly', 
                             (settings.screen_width // 2, Q2_y))
     next_text, next_Rect = text_setup(' next ', ((settings.screen_width // 2) + 300, footer_y), 
-                              36, bg_color=settings.WHITE)
+                              36, bg_color=color.WHITE)
     
     events = pg.event.get()
     for event in events:
@@ -73,10 +74,13 @@ def player_setup(screen, input_box, chara_box, pos_input, setting_para, max_play
     input_box.draw(screen)
     
     chara_pick = []
-    for box in chara_box:
+    chara_rest = []
+    for i, box in enumerate(chara_box):
         box.draw(screen)
         if box.hit % 2:
-            chara_pick.append(box.key)
+            chara_pick.append(i)
+        else:
+            chara_rest.append(i)
 
     
     screen.blit(Q1, Q1Rect)
@@ -92,9 +96,8 @@ def player_setup(screen, input_box, chara_box, pos_input, setting_para, max_play
             if player_number < len(chara_pick):
                 play_setup_done = False
             elif player_number > len(chara_pick):
-                chara_rest = [ box.key for box in chara_box if box.key not in chara_pick]
                 random.shuffle(chara_rest)
-                while len(chara_pick) < player_number:
+                while len(chara_pick) < player_number:    
                     chara_pick.append(chara_rest.pop())
                 play_setup_done = True
             else:
@@ -107,10 +110,12 @@ def player_setup(screen, input_box, chara_box, pos_input, setting_para, max_play
     
     return  play_setup_done, chara_pick
 
-def chara_setup(screen, chara_dic, pos, size, col = 2):
+def chara_setup(screen, chara_pool, pos, size, col = 2):
     # start from x = 360, y = 250
     # size = 1000, 400
-    chara_box = [SelectDicBox(key = k, val = v) for k, v in chara_dic.items()]
+    chara_box = [SelectDicBox(key = chara.key, 
+                              val = chara.discribe, 
+                              color = chara.color) for chara in chara_pool]
     
     n_point = math.ceil(len(chara_box)/col)
 
@@ -123,7 +128,9 @@ def chara_setup(screen, chara_dic, pos, size, col = 2):
         for box in chara_box[ n_col * n_point : (n_col+1) * n_point]:
             box.update_rect(x,y,w,h)
             y += h
+            y += 10
         x += w
+        x += 10
     return chara_box
 
 
@@ -209,19 +216,26 @@ class SelectTextBox():
 
 class SelectDicBox():
 
-    def __init__(self, x=10, y=10, w=10, h=10, key='', val=[]):
+    def __init__(self, x=10, y=10, w=10, h=10, key='', val=[], color = (50,50,50)):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
         self.rect = pg.Rect(x, y, w, h)
         self.color = (192, 192, 192)
+        self.txt_color = (192, 192, 192)
         self.key = key
-        self.txt_surface = FONT.render(key, True, (50,50,50))
         self.val = val
         self.active = False
         self.hit = 0
-    
+        
+        # color
+        self.rect_select_color = color
+        self.txt_select_color = (50,50,50)
+        self.unselect_color = (192,192,192)
+        
+        self.txt_surface = FONT.render(key, True, (50,50,50))
+        
     def update_rect(self,x,y,w,h):
         self.rect = pg.Rect(x,y,w,h)
         self.x = x
@@ -238,7 +252,8 @@ class SelectDicBox():
                     self.hit += 1
                     
                 # Change the current color of the input box.
-                self.color = (0, 0, 0) if self.hit % 2 else (192, 192, 192)
+                self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
+                self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
         else:
             if event.type == pg.MOUSEBUTTONDOWN:
                 # If the user clicked on the input_box rect.
@@ -249,7 +264,8 @@ class SelectDicBox():
                 else:
                     self.active = False
                 # Change the current color of the input box.
-                self.color = (0, 0, 0) if self.active else (192, 192, 192)
+                self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
+                self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
                             
     def update(self):
         # Resize the box if the text is too long.
@@ -259,7 +275,7 @@ class SelectDicBox():
     def draw(self, screen):
         n = len(self.val)
         for i, txt in enumerate(self.val):
-            val_txt_surface = FONT_p.render(txt, True, self.color)
+            val_txt_surface = FONT_p.render(txt, True, self.txt_color)
             val_rect = pg.Rect( self.x+ 50, self.y + (i+1)*50,
                                self.w//2, self.h//n)
             screen.blit(val_txt_surface, val_rect)
@@ -267,5 +283,5 @@ class SelectDicBox():
         # Blit the text.
         screen.blit(self.txt_surface, (self.rect.x+10, self.rect.y+5))
         # Blit the rect.
-        pg.draw.rect(screen, self.color, self.rect, 2)
+        pg.draw.rect(screen, self.color, self.rect, 10)
 

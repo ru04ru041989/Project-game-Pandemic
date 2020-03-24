@@ -8,10 +8,3 @@ class Settings(object):
         self.screen_height = 800
         self.bg_color = (230,230,230)
         
-        self.BLACK = (0, 0, 0)
-        self.WHITE = (255, 255, 255)
-        self.GREEN = (0, 255, 0)
-        self.RED = (255, 0, 0)
-        self.BLUE = (0, 0, 128)
-        self.PURPLE = (102, 0, 102)
-        self.SHADOW = (192, 192, 192)

@@ -7,8 +7,8 @@ import function as fn
 
 from img import WorldMap, grid
 from feature import City, Player, InfectionCard
-from feature import Scientist
-
+from feature import Scientist, Researcher, Medic, Dispatcher, OperationsExpert
+import color as color
 
 
 pg.init()
@@ -50,25 +50,22 @@ InfectionCard = InfectionCard(cities_ls)
 
 
 
-max_player = 4
-chara_dic = {'Scientist': ['Need only four card for cure'],
-             'Researcher': ['Give a player card from your hand for one action', 
-                            'Both of you need to be at the same city'], 
-             'Medic': ['Remove all the same disease in the city when you treat',
-                       'If the cure is found, no need to cause for treat'], 
-             'Dispatcher': ['Build a research station in your city with one action'], 
-             'Operations Expert': ['Move other player in your turn ',
-                                   'Move any player to another player''city for one action']}
+max_player = 5
 
+sci = Scientist()
+res = Researcher()
+med = Medic()
+ope = OperationsExpert()
+dip = Dispatcher()
 
-
+chara_pool = [sci, res, med, ope, dip]
 
 
 setting_para = (80,150,670)
 input_box = fn.InputBox(settings.screen_width // 2 + 220, setting_para[0] - 10, 50, 32)
 
 chara_para = [[50,200], [1200,400]]
-chara_box = fn.chara_setup(screen, chara_dic, chara_para[0], chara_para[1])
+chara_box = fn.chara_setup(screen, chara_pool, chara_para[0], chara_para[1])
 
 play_setup_done = False
 pos_input = []
@@ -82,10 +79,13 @@ while not play_setup_done:
     pg.display.update() 
 
 
-print(chara_pick) 
-
 # setup player
+Players = [ chara_pool[chara] for chara in chara_pick]
 
+# all player start form 'atlanta'
+for i, player in enumerate(Players):
+    player.playerNO_update(i+1)
+    player.city_update(cities['atlanta'])
 
 initial_game_setting_done = False
 # game loop
@@ -105,7 +105,8 @@ while True:
     
     
     # draw player state
-    
+    for player in Players:
+        player.draw_player_map(screen)
     # game initial setting (only run once)
     # ======================================================
     # initial infection: draw 3 card, 3 time
