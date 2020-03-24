@@ -48,34 +48,46 @@ InfectionCard = InfectionCard(cities_ls)
     #       add epidemic card to each part
     #       shuffle each part and add together into a pile
 
-initial_game_setting_done = False
 
-play_setup_reset, play_setup_done = False, False
-pos_input = []
 
 max_player = 4
-setting_para = (160,250,670)
-input_box = fn.InputBox(settings.screen_width // 2 + 220, 150, 50, 32)
+chara_dic = {'Scientist': ['Need only four card for cure'],
+             'Researcher': ['Give a player card from your hand for one action', 
+                            'Both of you need to be at the same city'], 
+             'Medic': ['Remove all the same disease in the city when you treat',
+                       'If the cure is found, no need to cause for treat'], 
+             'Dispatcher': ['Build a research station in your city with one action'], 
+             'Operations Expert': ['Move other player in your turn ',
+                                   'Move any player to another player''city for one action']}
 
-clock = pg.time.Clock()
+
+
+
+
+setting_para = (80,150,670)
+input_box = fn.InputBox(settings.screen_width // 2 + 220, setting_para[0] - 10, 50, 32)
+
+chara_para = [[50,200], [1200,400]]
+chara_box = fn.chara_setup(screen, chara_dic, chara_para[0], chara_para[1])
+
+play_setup_done = False
+pos_input = []
 # initial setting loop
 while not play_setup_done:
     screen.fill(bg_color)
     
-    if play_setup_reset:
-        pos_input = []
-        input_box.text = ''    
-    
-    play_setup_reset, play_setup_done, player_number = \
-        fn.player_setup(screen, input_box, pos_input, setting_para, max_player)
+    play_setup_done, chara_pick = \
+        fn.player_setup(screen, input_box, chara_box, pos_input, setting_para, max_player)
     
     pg.display.update() 
 
 
-print(player_number) 
+print(chara_pick) 
 
 # setup player
 
+
+initial_game_setting_done = False
 # game loop
 while True:
     # game display setting

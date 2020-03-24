@@ -13,3 +13,5 @@ class Settings(object):
         self.GREEN = (0, 255, 0)
         self.RED = (255, 0, 0)
         self.BLUE = (0, 0, 128)
+        self.PURPLE = (102, 0, 102)
+        self.SHADOW = (192, 192, 192)
