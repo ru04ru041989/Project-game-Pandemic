@@ -1,18 +1,34 @@
 import os
 import string
 import random
+import time
 import pygame as pg
 
 import color as color
 
+pg.init()
+FONT_pick = pg.font.Font(None, 32)
+FONT_notpick = pg.font.Font(None, 24)
+
+
+
 class City():
-    def __init__(self, color, x, y, txt_up):
+    def __init__(self, cityname, ctcolor, x, y, w, h, txt_up):
         # link: list of the city linked
-        self.color = color
+        self.rect = pg.Rect(x-5, y-4, w, h)
+        self.txt = cityname
+        self.color = ctcolor
         self.pos = (x,y)
         self.link = []
         self.txt_up = txt_up
-        self.img_size = (25,25)
+        self.img_size = (w,h)
+        
+        # click control
+        self.active = False
+        self.hit = 0
+        self.font_notpick = pg.font.SysFont('Arial',12, bold = True)
+        self.font_pick = pg.font.SysFont('Arial',16, bold = True)
+        self.pick_color = color.SHADOW        
         
         # how many disease cube in the city (Max = 3)
         self.dis = {'r':[], 'b':[], 'k':[], 'y':[]}
@@ -20,7 +36,7 @@ class City():
                         [0,1], [1,1], [2,1],
                         [0,2], [1,2], [2,2]]
         self.is_explose = False
-    
+
     def add_link(self, city):
         self.link.append(city)
     
@@ -42,19 +58,23 @@ class City():
             self.dis_pos.append(self.dis[dis].pop())
             
         
-    def draw_city_label(self, screen, cityname):
+    def draw_city_label(self, screen):
         image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
         image = pg.transform.scale(image,self.img_size)
         screen.blit(image, (self.pos[0]-5, self.pos[1]-4))
         
-        font = pg.font.SysFont('Arial',12, bold = True)
-        city_len = len(cityname)
-        txt = font.render(string.capwords(cityname), True,
-                        (0, 0, 0))
+        font = self.font_pick if self.active else self.font_notpick
+        city_len = len(self.txt)
+        txt = font.render(string.capwords(self.txt), True, (0, 0, 0))
+        
         if self.txt_up:
             screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]-18))
         else:
-            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]+18))
+            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]+21))
+            
+        # draw rect if activate
+        if self.active:
+            pg.draw.rect(screen, self.pick_color, self.rect, 2)
 
     def draw_city_dis(self,screen):
         for dis in self.dis:
@@ -65,7 +85,30 @@ class City():
                 for pos in self.dis[dis]:
                     screen.blit(image, (self.pos[0] + pos[0]*9 -3, 
                                         self.pos[1] + pos[1]*9 ))
-                
+
+    def handle_event(self, event, keep_select = False):
+        if keep_select:
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect.
+                if self.rect.collidepoint(event.pos):
+                    # Toggle the active variable.
+                    self.hit += 1
+                    
+                # Change the current color of the input box.
+                #self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
+                #self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
+        else:
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect.
+                if self.rect.collidepoint(event.pos):
+                    # Toggle the active variable.
+                    self.active = not self.active
+
+                else:
+                    self.active = False
+                # Change the current color of the input box.
+                #self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
+                #self.color = self.rect_select_color if self.hit % 2 else self.unselect_color                
         
     
 class InfectionCard():
@@ -86,10 +129,17 @@ class Player():
     def __init__(self):
         # drawing para
         self.img_size = [16,20]
-        self.angle = 0
+        self.init_angle = 0
         self.pos = [0,0]
         self.playerNO = 0
         
+        # select para
+        self.pawn_rect = pg.Rect(0, 0, 16, 20)
+        self.active = False
+        self.hit = 0
+
+        self.pick_color = color.SHADOW
+                
         # basic para
         self.city = ''
         self.hand = []
@@ -103,37 +153,83 @@ class Player():
         self.sharelock = True
         self.move_other = False
 
+    def handle_event(self, event, keep_select = True):
+        if keep_select:
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect.
+                if self.pawn_rect.collidepoint(event.pos):
+                    # Toggle the active variable.
+                    self.hit += 1
+                else:
+                    self.hit = 0
+        else:
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect.
+                if self.pawn_rect.collidepoint(event.pos):
+                    # Toggle the active variable.
+                    self.active = not self.active
+                else:
+                    self.active = False
+        
+          
+
     def playerNO_update(self, playerNO):
         self.playerNO = playerNO
-        self.angle = 45 - 40*(int(playerNO) -1)
+        self.init_angle = 45 - 40*(int(playerNO) -1)
 
     def city_update(self, city):
         self.city = city
         x,y = city.pos
         if int(self.playerNO) == 1:
-            self.pos = [x -self.img_size[0] - self.img_size[0]*0.2,
-                        y -self.img_size[1] - self.img_size[1]*0.1]
+            self.pos = [x -self.img_size[0] - self.img_size[0]*0.7,
+                        y -self.img_size[1] - self.img_size[1]*0.6]
             
         elif int(self.playerNO) == 2:
-            self.pos = [x -self.img_size[0] + self.img_size[0]*1.2 ,
-                        y -self.img_size[1] - self.img_size[1]*0.2]
+            self.pos = [x -self.img_size[0] + self.img_size[0]*0.7 ,
+                        y -self.img_size[1] - self.img_size[1]*0.7]
             
         elif int(self.playerNO) == 3:
-            self.pos = [x -self.img_size[0] + self.img_size[0]*1.9 ,
-                        y -self.img_size[1] - self.img_size[1]*0.1] 
+            self.pos = [x -self.img_size[0] + self.img_size[0]*1.4 ,
+                        y -self.img_size[1] - self.img_size[1]*0.6] 
             
         elif int(self.playerNO) == 4:
-            self.pos = [x + city.img_size[0] - self.img_size[0]*0.6, 
-                        y ]
+            self.pos = [x + city.img_size[0] - self.img_size[0]*1.1, 
+                        y - self.img_size[1]*0.5]
             
         elif int(self.playerNO) == 5:
-            self.pos = [x + city.img_size[0] - self.img_size[0], 
-                        y + city.img_size[1] - self.img_size[1]*0.6]
+            self.pos = [x + city.img_size[0] - self.img_size[0]*1.5, 
+                        y + city.img_size[1] - self.img_size[1]*1.1]
                 
         elif int(self.playerNO) == 6:
-            self.pos = [x + city.img_size[0] - self.img_size[0]*1.2 ,
-                        y + city.img_size[1]]    
+            self.pos = [x + city.img_size[0] - self.img_size[0]*1.7 ,
+                        y + city.img_size[1] * 0.5]   
         
+        # finaly update self.Rect
+        self.pos[0] += self.img_size[0]*0.5
+        self.pos[1] += self.img_size[1]*0.5
+        self.pawn_rect = pg.Rect(self.pos[0], self.pos[1], 16, 20)
+
+    def draw_player_area(self, screen):
+        # a region to show player's hand
+        pass
+    
+    def draw_player_map(self, screen):
+        # draw player on the map
+        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab +'.png')
+        image = pg.transform.scale(image, self.img_size)
+        
+        if self.hit % 2:
+            image = pg.transform.rotate(image, self.init_angle + 8*(round(time.time() % 360)))
+        else:
+            image = pg.transform.rotate(image, self.init_angle)
+        
+        #pawn_cent = self.pawn_rect.center
+        #screen.blit(image, pawn_cent)
+        screen.blit(image, self.pos)
+
+
+
+      
     def move(self):
         pass
     
@@ -160,16 +256,6 @@ class Player():
         self.hand.remove(card)
         pass
 
-    def draw_player_area(self, screen):
-        # a region to show player's hand
-        pass
-    
-    def draw_player_map(self, screen):
-        # draw player on the map
-        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab +'.png')
-        image = pg.transform.scale(image, self.img_size)
-        image = pg.transform.rotate(image, self.angle)
-        screen.blit(image, self.pos)
 
 
 class Scientist(Player):

@@ -26,7 +26,8 @@ grid = grid(screen)
 bg_color = settings.bg_color
 
 # city list
-cities, cities_ls = fn.cities_setup('city_map.csv','city_link.csv')
+city_size = (28,28)
+cities, cities_ls = fn.cities_setup('city_map.csv','city_link.csv', city_size)
 
 # initial game setting
 infect_rate = 2
@@ -79,6 +80,8 @@ while not play_setup_done:
     pg.display.update() 
 
 
+# game initial setting (only run once)
+# ======================================================
 # setup player
 Players = [ chara_pool[chara] for chara in chara_pick]
 
@@ -87,52 +90,65 @@ for i, player in enumerate(Players):
     player.playerNO_update(i+1)
     player.city_update(cities['atlanta'])
 
-initial_game_setting_done = False
+# initial infection: draw 3 card, 3 time
+#   1st city get 3 disease cubes, 2nd get 2 , 3th get 1
+for i in [3,2,1]:
+    for j in range(3):
+        city = InfectionCard.draw()
+        cities[city].infect(cities[city].color,i)
+        cities[city].draw_city_dis(screen)
+
+
+
 # game loop
-while True:
+game_on = True
+while game_on:
+    
     # game display setting
     # =====================================================
     # fill color
     screen.fill(bg_color)
+
+    # supervise keyboard and mouse item
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            game_on = False
+            break
+        
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            pos = pg.mouse.get_pos()
+            grid.update(pos)
+        
+        # check who get pick
+        # city
+        for city in cities:
+            cities[city].handle_event(event)
+        # player
+        for player in Players:
+            player.handle_event(event)
 
     # draw world map
     WorldMap.blitme()
     
     # draw city state
     for city in cities:
-        cities[city].draw_city_label(screen, city)
+        cities[city].draw_city_label(screen)
         cities[city].draw_city_dis(screen)   
     
     
     # draw player state
     for player in Players:
         player.draw_player_map(screen)
-    # game initial setting (only run once)
-    # ======================================================
-    # initial infection: draw 3 card, 3 time
-    #   1st city get 3 disease cubes, 2nd get 2 , 3th get 1
-    if not initial_game_setting_done:
-        for i in [3,2,1]:
-            for j in range(3):
-                city = InfectionCard.draw()
-                cities[city].infect(cities[city].color,i)
-                cities[city].draw_city_dis(screen)
 
-        initial_game_setting_done = True
-    
-    # supervise keyboard and mouse item
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            sys.exit()
-        
-        elif event.type == pg.MOUSEBUTTONDOWN:
-            pos = pg.mouse.get_pos()
-            
-            grid.update(pos)
 
-    grid.draw()
+    #grid.draw()
     
     # visualiaze the window
     pg.display.flip()
+
+for play in Players:
+    print(player.key)
+    print(player.hit)
+    print(player.active)
 
 pg.quit()

@@ -9,14 +9,15 @@ import color as color
 
 settings = Settings()
 
-def cities_setup(ct_map, ct_link):
+def cities_setup(ct_map, ct_link, city_size):
     cities = {}
     cities_ls = []
     with open(ct_map) as city_map:
         content = csv.reader(city_map, delimiter=',')
         for row in content:
             if row[1] in ['r','b','k','y']:
-                cities[row[0]] = City(row[1], int(row[2]), int(row[3]), int(row[4]))
+                cities[row[0]] = City(row[0], row[1], int(row[2]), int(row[3]),
+                                      city_size[0], city_size[1], int(row[4]))
                 cities_ls.append(row[0])
                 
     with open(ct_link) as city_link:
