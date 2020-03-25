@@ -40,7 +40,7 @@ dis_cube_k = 24
 dis_cube_y = 24
 
 # shuffle infection card,
-InfectionCard = InfectionCard(cities_ls)
+InfectionCard = InfectionCard(cities_ls, infect_rate)
      
     
     # shuffle city card and special card
@@ -68,6 +68,10 @@ input_box = fn.InputBox(settings.screen_width // 2 + 220, setting_para[0] - 10, 
 chara_para = [[50,200], [1200,400]]
 chara_box = fn.chara_setup(screen, chara_pool, chara_para[0], chara_para[1])
 
+''' debug mode, get to the main setting'''
+Players = [ chara for chara in chara_pool]
+'''
+
 play_setup_done = False
 pos_input = []
 # initial setting loop
@@ -85,18 +89,34 @@ while not play_setup_done:
 # setup player
 Players = [ chara_pool[chara] for chara in chara_pick]
 
+'''
+
+
+
 # all player start form 'atlanta'
 for i, player in enumerate(Players):
     player.playerNO_update(i+1)
     player.city_update(cities['atlanta'])
 
-# initial infection: draw 3 card, 3 time
-#   1st city get 3 disease cubes, 2nd get 2 , 3th get 1
+
+    
+
+
+
+
+
+InfectionCard.active_draw()
+  
 for i in [3,2,1]:
     for j in range(3):
-        city = InfectionCard.draw()
-        cities[city].infect(cities[city].color,i)
-        cities[city].draw_city_dis(screen)
+        rtn_draw = ''       
+        while not rtn_draw:
+            rtn_draw, rtn_discard = \
+                fn.present(screen, cities, Players, InfectionCard, WorldMap, grid, 
+                           special_rate = i, rtn_draw = rtn_draw)
+
+InfectionCard.deactive_draw()
+
 
 
 
@@ -104,51 +124,7 @@ for i in [3,2,1]:
 game_on = True
 while game_on:
     
-    # game display setting
-    # =====================================================
-    # fill color
-    screen.fill(bg_color)
-
-    # supervise keyboard and mouse item
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            game_on = False
-            break
-        
-        elif event.type == pg.MOUSEBUTTONDOWN:
-            pos = pg.mouse.get_pos()
-            grid.update(pos)
-        
-        # check who get pick
-        # city
-        for city in cities:
-            cities[city].handle_event(event)
-        # player
-        for player in Players:
-            player.handle_event(event)
-
-    # draw world map
-    WorldMap.blitme()
-    
-    # draw city state
-    for city in cities:
-        cities[city].draw_city_label(screen)
-        cities[city].draw_city_dis(screen)   
-    
-    
-    # draw player state
-    for player in Players:
-        player.draw_player_map(screen)
-
-
-    #grid.draw()
-    
-    # visualiaze the window
-    pg.display.flip()
-
-for play in Players:
-    print(player.key)
-    print(player.hit)
-    print(player.active)
+    fn.present(screen, cities, Players, InfectionCard, WorldMap, grid)
+  
 
 pg.quit()

@@ -9,6 +9,7 @@ import color as color
 pg.init()
 FONT_pick = pg.font.Font(None, 32)
 FONT_notpick = pg.font.Font(None, 24)
+FONT = pg.font.Font(None, 32)
 
 
 
@@ -57,35 +58,6 @@ class City():
         else:
             self.dis_pos.append(self.dis[dis].pop())
             
-        
-    def draw_city_label(self, screen):
-        image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
-        image = pg.transform.scale(image,self.img_size)
-        screen.blit(image, (self.pos[0]-5, self.pos[1]-4))
-        
-        font = self.font_pick if self.active else self.font_notpick
-        city_len = len(self.txt)
-        txt = font.render(string.capwords(self.txt), True, (0, 0, 0))
-        
-        if self.txt_up:
-            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]-18))
-        else:
-            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]+21))
-            
-        # draw rect if activate
-        if self.active:
-            pg.draw.rect(screen, self.pick_color, self.rect, 2)
-
-    def draw_city_dis(self,screen):
-        for dis in self.dis:
-            if self.dis[dis]:
-                image = pg.image.load(os.getcwd() + '\\img\\dis_' + dis +'.png')
-                image = pg.transform.scale(image,(8,8))
-                
-                for pos in self.dis[dis]:
-                    screen.blit(image, (self.pos[0] + pos[0]*9 -3, 
-                                        self.pos[1] + pos[1]*9 ))
-
     def handle_event(self, event, keep_select = False):
         if keep_select:
             if event.type == pg.MOUSEBUTTONDOWN:
@@ -110,17 +82,129 @@ class City():
                 #self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
                 #self.color = self.rect_select_color if self.hit % 2 else self.unselect_color                
         
+    def display_city_label(self, screen):
+        image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
+        image = pg.transform.scale(image,self.img_size)
+        screen.blit(image, (self.pos[0]-5, self.pos[1]-4))
+        
+        font = self.font_pick if self.active else self.font_notpick
+        city_len = len(self.txt)
+        txt = font.render(string.capwords(self.txt), True, (0, 0, 0))
+        
+        if self.txt_up:
+            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]-18))
+        else:
+            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]+21))
+            
+        # draw rect if activate
+        if self.active:
+            pg.draw.rect(screen, self.pick_color, self.rect, 2)
+
+    def display_city_dis(self,screen):
+        for dis in self.dis:
+            if self.dis[dis]:
+                image = pg.image.load(os.getcwd() + '\\img\\dis_' + dis +'.png')
+                image = pg.transform.scale(image,(8,8))
+                
+                for pos in self.dis[dis]:
+                    screen.blit(image, (self.pos[0] + pos[0]*9 -3, 
+                                        self.pos[1] + pos[1]*9 ))
+
     
 class InfectionCard():
-    def __init__(self,city_ls):
+    def __init__(self,city_ls, rate):
         self.cards = city_ls.copy()
         random.shuffle(self.cards)
         self.discards = []
+        
+        self.w = 100
+        self.h = 90
+        
+        self.rate = int(rate)
+        
+        # select contol
+        self.color = color.RED
+        
+        # area for draw
+        self.draw_pos = [630,510]
+        self.draw_rect = pg.Rect(630, 510, 100, 90)
+        image = pg.image.load(os.getcwd() + '\\img\\infectcard.png')
+        self.image = pg.transform.scale(image, (self.w,self.h))
+        
+        self.draw_active = False
+        
+        # area for discard
+        self.discard_pos = [790,530]
+        self.discard_rect = pg.Rect(770, 510, 100, 90)
+        self.discard_txt = ''
+        
+        self.discard_active = False
+
+    def active_draw(self):
+        self.draw_active = True
+        self.draw_discard = False
+    def active_discard(self):
+        self.draw_active = False
+        self.draw_discard = True    
+    def deactive_draw(self):
+        self.draw_active = False
+    def deactive_disdraw(self):
+        self.draw_discard = False
+
+    def handle_event(self, event):
+        rtn_draw, rtn_discard = '',''
+        if event.type == pg.MOUSEBUTTONDOWN:
+            # If the user clicked on the discard pile.
+            if self.discard_rect.collidepoint(event.pos) and not self.discard_active :
+                # highlight the city
+                rtn_discard = self.discard_txt
+                
+            if self.discard_rect.collidepoint(event.pos) and self.discard_active :
+                # shuffle the discard pile and add to the end of the whole pile
+                random.shuffle(self.discards)
+                self.cards = self.cards + self.discards
+                self.discards = []
+                rtn_discard = ''
+
+            if self.draw_rect.collidepoint(event.pos) and self.draw_active :
+                rtn_draw =  self.draw()
+
+        return rtn_draw, rtn_discard
+
+            
+  
+    def display(self, screen):
+        # need to know when the play's round end > to draw card
+        # need to know when to re-shuffle discard pile > when pick up a epdimac card
+        # when those two event occurd, start checking MOUSEDOWN event, to respond accordingly
+        
+        # display infection rate
+        rate_text = 'Infection rate: ' + str(self.rate)
+        rate_txt_surface = FONT.render(rate_text, True, self.color)
+        screen.blit(rate_txt_surface, (self.draw_pos[0] +30, self.draw_pos[1]-30))
+        
+        # display draw part
+        screen.blit(self.image, self.draw_pos)
+        if self.draw_active:
+            pg.draw.rect(screen, self.color, self.draw_rect, 5)
+        
+        # display discard part
+        city_name = string.capwords(self.discard_txt).split()
+        for i, txt in enumerate(city_name):
+            txt_surface = FONT_notpick.render(txt, True, color.BLACK)
+            screen.blit(txt_surface, (self.discard_pos[0], 
+                                      self.discard_pos[1] + i*20))
+        if self.discard_active:
+            pg.draw.rect(screen, self.color, self.discard_rect, 5)
+            
     def draw(self):
         card = self.cards.pop()
+        self.discard_txt = card
         self.discards.append(card)
         return card
-        
+
+
+
 class PlayerCard():
     def __init__(self):
         pass
@@ -171,8 +255,6 @@ class Player():
                 else:
                     self.active = False
         
-          
-
     def playerNO_update(self, playerNO):
         self.playerNO = playerNO
         self.init_angle = 45 - 40*(int(playerNO) -1)
@@ -209,11 +291,11 @@ class Player():
         self.pos[1] += self.img_size[1]*0.5
         self.pawn_rect = pg.Rect(self.pos[0], self.pos[1], 16, 20)
 
-    def draw_player_area(self, screen):
+    def display_player_area(self, screen):
         # a region to show player's hand
         pass
     
-    def draw_player_map(self, screen):
+    def display_player_map(self, screen):
         # draw player on the map
         image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab +'.png')
         image = pg.transform.scale(image, self.img_size)

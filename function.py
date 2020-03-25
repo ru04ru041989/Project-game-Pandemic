@@ -8,6 +8,7 @@ from settings import Settings
 import color as color
 
 settings = Settings()
+bg_color = settings.bg_color
 
 def cities_setup(ct_map, ct_link, city_size):
     cities = {}
@@ -133,6 +134,73 @@ def chara_setup(screen, chara_pool, pos, size, col = 2):
         x += w
         x += 10
     return chara_box
+
+
+def present(screen, cities, Players, InfectionCard, WorldMap, grid, 
+            special_rate = False, rtn_draw = '', rtn_discard = ''):
+    
+    if not special_rate:
+        rate = InfectionCard.rate
+    else:
+        rate = special_rate
+    # game display setting
+    # =====================================================
+    # fill color
+    screen.fill(bg_color)
+
+    ###
+    # supervise keyboard and mouse item
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            sys.exit()
+        
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            pos = pg.mouse.get_pos()
+            grid.update(pos)
+        
+        # check who get pick
+        # city
+        for city in cities:
+            cities[city].handle_event(event)
+        # player
+        for player in Players:
+            player.handle_event(event)
+            
+        # infection card
+        rtn_draw, rtn_discard = InfectionCard.handle_event(event)
+        
+        #  highlight this city
+        if rtn_discard:
+            cities[rtn_discard].active = True                
+                
+        if rtn_draw:
+            cities[rtn_draw].active = True
+            cities[rtn_draw].infect(cities[rtn_draw].color, rate)
+    
+    ## draw stuff
+    # draw world map
+    WorldMap.blitme()
+    
+    # draw city state
+    for city in cities:
+        cities[city].display_city_label(screen)
+        cities[city].display_city_dis(screen)   
+    
+    
+    # draw player state
+    for player in Players:
+        player.display_player_map(screen)
+
+    # draw infection area
+    InfectionCard.display(screen)
+
+    #grid.draw()
+    
+    # visualiaze the window
+    pg.display.flip()    
+
+    return rtn_draw, rtn_discard
+
 
 
 pg.init()
