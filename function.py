@@ -7,6 +7,8 @@ from feature import City, Player
 from settings import Settings
 import color as color
 
+from img import InputBox, SelectBox, SelectText, SelectDicText
+
 settings = Settings()
 bg_color = settings.bg_color
 
@@ -109,7 +111,7 @@ def player_setup(screen, input_box, chara_box, pos_input, setting_para, max_play
         if player_number > max_player:
             play_setup_done = False
         else:
-            if player_number < len(chara_pick) or len(chara_pick) <=1:
+            if player_number < len(chara_pick) or player_number <= 1:
                 play_setup_done = False
             elif player_number > len(chara_pick):
                 random.shuffle(chara_rest)
@@ -205,6 +207,7 @@ def control_infection(screen, cities, Players, InfectionCard, WorldMap, grid,
 pg.init()
 FONT = pg.font.Font(None, 32)
 FONT_p = pg.font.Font(None, 24)
+'''
 class InputBox:
 
     def __init__(self, x, y, w, h, text=''):
@@ -403,82 +406,21 @@ class SelectDicText(SelectBox):
         rect = pg.Rect(self.x, self.y, self.w, self.h)
         pg.draw.rect(screen, self.color, rect, thick)
       
-        
-        
-
-class SelectDicBox():
-
-    def __init__(self, x=10, y=10, w=10, h=10, key='', val=[], color = (50,50,50)):
-        self.rect = pg.Rect(x, y, w, h)
-        self.color = (192, 192, 192)
-        self.txt_color = (192, 192, 192)
-        self.key = key
-        self.val = val
-        self.active = False
-        self.hit = 0
-        
-        # color
-        self.rect_select_color = color
-        self.txt_select_color = (50,50,50)
-        self.unselect_color = (192,192,192)
-        
-        self.txt_surface = FONT.render(key, True, (50,50,50))
-        
-    def update_rect(self,x,y,w,h):
-        self.rect = pg.Rect(x,y,w,h)
-
-    def handle_event(self, event, keep_select = True):
-        if keep_select:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.hit += 1
-                    
-                # Change the current color of the input box.
-                self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
-                self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
-        else:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.active = not self.active
-
-                else:
-                    self.active = False
-                # Change the current color of the input box.
-                self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
-                self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
-                            
-    def update(self):
-        # Resize the box if the text is too long.
-        width = max(200, self.txt_surface.get_width()+10)
-        self.rect.w = width
-
-    def draw(self, screen):
-        n = len(self.val)
-        for i, txt in enumerate(self.val):
-            val_txt_surface = FONT_p.render(txt, True, self.txt_color)
-            val_rect = pg.Rect( self.rect.x+ 50, self.rect.y + (i+1)*50,
-                               self.rect.w//2, self.rect.h//n)
-            screen.blit(val_txt_surface, val_rect)
-            
-        # Blit the text.
-        screen.blit(self.txt_surface, (self.rect.x+10, self.rect.y+5))
-        # Blit the rect.
-        pg.draw.rect(screen, self.color, self.rect, 10)
-
+'''        
 
 class GameControl():
     
-    def __init__(self, screen, cities, Players, InfectionCard, WorldMap, grid):
+    def __init__(self, screen, cities, Players, InfectionCard, WorldMap, Tips, grid):
         self.screen = screen
         self.cities = cities
         self.Players = Players
         self.InfectionCard = InfectionCard
         self.WorldMap = WorldMap
         self.grid = grid
+        self.Tips = Tips
+        
+        # event control
+        self.rsp_player = ''
 
     def display(self):
         # draw world map
@@ -493,10 +435,22 @@ class GameControl():
         # draw player state
         for player in self.Players:
             player.display_player_map(self.screen)
+            player.display_player_area(self.screen)
 
         # draw infection area
         self.InfectionCard.display(self.screen)
 
+        # draw tips
+        if self.rsp_player:
+            content = self.rsp_player.discribe
+            self.Tips[0].update_content(content)
+        else:
+            self.Tips[0].update_content('')
+                    
+        for Tip in self.Tips:
+
+            Tip.display(self.screen)
+        
         #self.grid.draw()
     
         # visualiaze the window
@@ -510,8 +464,14 @@ class GameControl():
         for city in self.cities:
             self.cities[city].handle_event(event)
         # player
+        
+        self.rsp_player = ''
         for player in self.Players:
-            player.handle_event(event)
+            r = player.handle_event(event)
+            if r: 
+                self.rsp_player = player
+            
+
             
         # infection card
         rtn_draw, rtn_discard = self.InfectionCard.handle_event(event)

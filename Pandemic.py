@@ -7,7 +7,7 @@ import function as fn
 from function import GameControl
 
 from img import WorldMap, grid
-from feature import City, Player, InfectionCard
+from feature import City, Player, InfectionCard, Tip
 from feature import Scientist, Researcher, Medic, Dispatcher, OperationsExpert
 import color as color
 
@@ -63,6 +63,10 @@ dip = Dispatcher()
 chara_pool = [sci, res, med, ope, dip]
 
 
+chara_tip = Tip(1090, 620, 250 , 170)
+Tips = [chara_tip]
+
+
 setting_para = (80,150,670)
 input_box = fn.InputBox(settings.screen_width // 2 + 250, setting_para[0]-10 , 50, 32)
 
@@ -71,10 +75,9 @@ chara_para = [[50,200], [1200,400]]
 chara_box = fn.chara_setup(screen, chara_pool, chara_para[0], chara_para[1])
 
 
-
-#''' debug mode, get to the main setting'''
-#Players = [ chara for chara in chara_pool]
-#'''
+''' debug mode, get to the main setting'''
+Players = [ chara for chara in chara_pool]
+'''
 
 play_setup_done = False
 pos_input = []
@@ -82,8 +85,6 @@ pos_input = []
 while not play_setup_done:
     screen.fill(bg_color)
     
-
-
     play_setup_done, chara_pick= \
         fn.player_setup(screen, input_box, chara_box, pos_input, setting_para, max_player)
     
@@ -95,7 +96,7 @@ while not play_setup_done:
 # setup player
 Players = [ chara_pool[chara] for chara in chara_pick]
 
-#'''
+'''
 
 
 
@@ -107,7 +108,7 @@ for i, player in enumerate(Players):
 
     
 
-GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, grid)
+GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, Tips, grid)
 
 
 
