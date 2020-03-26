@@ -4,6 +4,7 @@ import pygame as pg
 
 from settings import Settings
 import function as fn
+from function import GameControl
 
 from img import WorldMap, grid
 from feature import City, Player, InfectionCard
@@ -63,14 +64,17 @@ chara_pool = [sci, res, med, ope, dip]
 
 
 setting_para = (80,150,670)
-input_box = fn.InputBox(settings.screen_width // 2 + 220, setting_para[0] - 10, 50, 32)
+input_box = fn.InputBox(settings.screen_width // 2 + 250, setting_para[0]-10 , 50, 32)
 
 chara_para = [[50,200], [1200,400]]
+
 chara_box = fn.chara_setup(screen, chara_pool, chara_para[0], chara_para[1])
 
-''' debug mode, get to the main setting'''
-Players = [ chara for chara in chara_pool]
-'''
+
+
+#''' debug mode, get to the main setting'''
+#Players = [ chara for chara in chara_pool]
+#'''
 
 play_setup_done = False
 pos_input = []
@@ -78,7 +82,9 @@ pos_input = []
 while not play_setup_done:
     screen.fill(bg_color)
     
-    play_setup_done, chara_pick = \
+
+
+    play_setup_done, chara_pick= \
         fn.player_setup(screen, input_box, chara_box, pos_input, setting_para, max_player)
     
     pg.display.update() 
@@ -89,7 +95,7 @@ while not play_setup_done:
 # setup player
 Players = [ chara_pool[chara] for chara in chara_pick]
 
-'''
+#'''
 
 
 
@@ -101,19 +107,27 @@ for i, player in enumerate(Players):
 
     
 
-
+GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, grid)
 
 
 
 InfectionCard.active_draw()
   
-for i in [3,2,1]:
-    for j in range(3):
-        rtn_draw = ''       
-        while not rtn_draw:
-            rtn_draw, rtn_discard = \
-                fn.present(screen, cities, Players, InfectionCard, WorldMap, grid, 
-                           special_rate = i, rtn_draw = rtn_draw)
+for i in [1, 1, 1, 2, 2, 2, 3, 3, 3]:
+
+    rtn_draw, rtn_discard = '',''
+    while not rtn_draw:
+
+        GameControl.display()
+    
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                sys.exit()
+        
+            rtn_draw, rtn_discard = GameControl.even_control(event)
+    
+        GameControl.after_event_initial(rtn_draw, rtn_discard,i)
+
 
 InfectionCard.deactive_draw()
 
@@ -124,7 +138,19 @@ InfectionCard.deactive_draw()
 game_on = True
 while game_on:
     
-    fn.present(screen, cities, Players, InfectionCard, WorldMap, grid)
-  
-
+    #fn.control_infection(screen, cities, Players, InfectionCard, WorldMap, grid)
+    GameControl.display()
+    
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            sys.exit()
+        
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            pos = pg.mouse.get_pos()
+            grid.update(pos)
+        
+        rtn_draw, rtn_discard = GameControl.even_control(event)
+    
+    GameControl.after_event(rtn_draw, rtn_discard)
+    
 pg.quit()

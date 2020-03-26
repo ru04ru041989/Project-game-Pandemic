@@ -47,7 +47,7 @@ class City():
         if len(self.dis[dis]) + number >3:
             return True
         else:
-            for i in range(number):
+            for j in range(number):
                 self.dis[dis].append(self.dis_pos.pop(0))
             return False
     
@@ -110,7 +110,8 @@ class City():
                     screen.blit(image, (self.pos[0] + pos[0]*9 -3, 
                                         self.pos[1] + pos[1]*9 ))
 
-    
+
+# adding the rest of each disease's cube
 class InfectionCard():
     def __init__(self,city_ls, rate):
         self.cards = city_ls.copy()
