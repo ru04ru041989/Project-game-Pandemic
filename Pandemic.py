@@ -62,9 +62,9 @@ dip = Dispatcher()
 
 chara_pool = [sci, res, med, ope, dip]
 
-
-chara_tip = Tip(1090, 620, 250 , 170)
-Tips = [chara_tip]
+city_tip = Tip(10,10,300,60, color.WHITE, interval = 20, textsize=10)
+chara_tip = Tip(1090, 620, 260 , 170, color.WHITE, interval = 35)
+Tips = {'player': chara_tip, 'city': city_tip}
 
 
 setting_para = (80,150,670)
@@ -106,10 +106,7 @@ for i, player in enumerate(Players):
     player.city_update(cities['atlanta'])
 
 
-    
-
 GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, Tips, grid)
-
 
 
 InfectionCard.active_draw()
@@ -125,10 +122,16 @@ for i in [1, 1, 1, 2, 2, 2, 3, 3, 3]:
             if event.type == pg.QUIT:
                 sys.exit()
         
-            rtn_draw, rtn_discard = GameControl.even_control(event)
-    
-        GameControl.after_event_initial(rtn_draw, rtn_discard,i)
+            # event control
+            rtn_draw, rtn_discard = GameControl.even_control_infection(event)
+            GameControl.even_control_player(event)
+            GameControl.even_control_city(event)
+        
+        # even respond
+        GameControl.event_respond_infection_initial(rtn_draw, rtn_discard,i)
 
+        #print(len(InfectionCard.discards))
+        #print(InfectionCard.discards)
 
 InfectionCard.deactive_draw()
 
@@ -150,8 +153,14 @@ while game_on:
             pos = pg.mouse.get_pos()
             grid.update(pos)
         
-        rtn_draw, rtn_discard = GameControl.even_control(event)
+        # even control
+        rtn_draw, rtn_discard = GameControl.even_control_infection(event)
+        GameControl.even_control_player(event)
+        GameControl.even_control_city(event)
     
-    GameControl.after_event(rtn_draw, rtn_discard)
+    # even respond
+    GameControl.event_respond_infection(rtn_draw, rtn_discard)
+    
+
     
 pg.quit()

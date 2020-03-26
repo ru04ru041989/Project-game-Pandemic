@@ -2,6 +2,7 @@ import os
 import string
 import random
 import time
+import math
 import pygame as pg
 
 import color as color
@@ -68,9 +69,8 @@ class City():
                     # Toggle the active variable.
                     self.hit += 1
                     
-                # Change the current color of the input box.
-                #self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
-                #self.color = self.rect_select_color if self.hit % 2 else self.unselect_color
+            return self.hit %2
+                    
         else:
             if event.type == pg.MOUSEBUTTONDOWN:
                 # If the user clicked on the input_box rect.
@@ -80,9 +80,8 @@ class City():
 
                 else:
                     self.active = False
-                # Change the current color of the input box.
-                #self.txt_color = self.txt_select_color if self.hit % 2 else self.unselect_color
-                #self.color = self.rect_select_color if self.hit % 2 else self.unselect_color                
+        
+            return self.active  
         
     def display_city_label(self, screen):
         image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
@@ -350,7 +349,7 @@ class Scientist(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.Scientist
         self.key = 'Scientist'
-        self.discribe = ['Need only four card for cure']
+        self.discribe = ['> Need only four card for cure']
         
         self.playbox.update_unselect_color(color.Scientist)
               
@@ -364,8 +363,8 @@ class Researcher(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.Researcher
         self.key = 'Researcher'
-        self.discribe = ['Give a player card from your hand for one action', 
-                            'Both of you need to be at the same city'] 
+        self.discribe = ['> Give a player card from your hand for one action', 
+                            '> Both of you need to be at the same city'] 
         
         self.playbox.update_unselect_color(color.Researcher)
         
@@ -379,8 +378,8 @@ class Medic(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.Medic
         self.key = 'Medic'
-        self.discribe = ['Remove all the same disease in the city when you treat',
-                       'If the cure is found, no need to cause for treat']        
+        self.discribe = [' > Remove all the same disease in the city when you treat',
+                       ' > If the cure is found, no need to cause for treat']        
         
         self.playbox.update_unselect_color(color.Medic)
         
@@ -394,8 +393,8 @@ class Dispatcher(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.Dispatcher
         self.key = 'Dispatcher'
-        self.discribe = ["Move other player in your turn ",
-                        "Move any player to another player's city for one action"]         
+        self.discribe = [" > Move other player in your turn ",
+                        " > Move any player to another player's city for one action"]         
         
         self.playbox.update_unselect_color(color.Dispatcher)
         
@@ -409,7 +408,7 @@ class OperationsExpert(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.OperationsExpert
         self.key = 'Operations Expert'
-        self.discribe = ['Build a research station in your city with one action']         
+        self.discribe = [' > Build a research station in your city with one action']         
         
         self.playbox.update_unselect_color(color.OperationsExpert)
         
@@ -422,13 +421,15 @@ class OperationsExpert(Player):
 # to tell user what is the chosen feature's function or what to do next
 
 class Tip():
-    def __init__(self, x=10, y=10, w=10, h=10, color = color.WHITE):
+    def __init__(self, x=10, y=10, w=10, h=10, color = color.WHITE, interval = 10, textsize = 16):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
         self.rect = pg.Rect(self.x, self.y, self.w, self.h)
         self.color = color
+        self.interval = interval
+        self.textsize = textsize
         
         # what to show
         self.content = ''
@@ -436,47 +437,47 @@ class Tip():
                                              w = self.w, h = self.h,
                                              text = self.content)]
         
-    def update_content(self, content):
+    def update_content(self, content, is_title = False, col_num = 1, x_border = 20, y_border = 10):
         self.content = content
         self.displaybox = []
-        interval = 40
-        if isinstance(content, dict):
-            i = 0
-            for k,v in content.items():
-                self.displaybox.append(SelectDicText( x = self.x, y = self.y + i*interval +10, 
-                                                    w = self.w, h = interval, 
-                                                     title = k, body = v,
-                                                     title_size=20, body_size=16))
-                i += 1
-        else:
-            if len(content) == 1 and not isinstance(content, list):
-                content = [content]
-            # let content fix
-            content_fix = []
-            for con in content:
-                if len(con) > 35:
-                    c = con.split()
-                    while len(' '.join(c)) > 30:
-                        con_temp = []
-                        while len(' '.join(con_temp)) <30 and c:
-                            con_temp.append(c.pop(0))
-                        if con_temp:
-                            content_fix.append(' '.join(con_temp))
-                    if c:
-                        content_fix.append(' '.join(c))
+        interval = self.interval
+
+        if len(content) == 1 and not isinstance(content, list):
+            content = [content]
+        # let content fix
+        content_fix = []
+        for con in content:
+            if len(con) > 35:
+                c = con.split()
+                while len(' '.join(c)) > 30:
+                    con_temp = []
+                    while len(' '.join(con_temp)) <30 and c:
+                        con_temp.append(c.pop(0))
+                    if con_temp:
+                        content_fix.append(' '.join(con_temp))
+                if c:
+                    content_fix.append(' '.join(c))
                     
-                else:
-                    content_fix.append(con)
-                    
-            i = 0
-            for txt in content_fix:
-                box = SelectText(x = self.x, y = self.y + i*interval +10, 
-                                             w = self.w, h = interval,
-                                             text = txt, size=16)
-                box.update_text_pos(x = self.x +20, y = self.y + i*interval +10)
+            else:
+                content_fix.append(con)
+        
+        n_point = math.ceil(len(content_fix)/col_num)
+        w = self.w // col_num
+        h = interval
+        
+        x = self.x
+        for n_col in range(col_num):
+            y = self.y
+            for txt in content_fix[n_col * n_point : (n_col+1) * n_point]:
+                size = self.textsize + 4 if is_title else self.textsize
+                box = SelectText(x = x, y = y, w = w, h = h,
+                                             text = txt, size=size)
+                box.update_text_pos(x = x + x_border, y = y + y_border)
                 self.displaybox.append(box)
-                
-                i += 1
+                y += h
+            x += w                
+        
+ 
         
     def display(self, screen):
         # Blit the rect.
