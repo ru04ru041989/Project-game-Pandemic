@@ -111,7 +111,6 @@ class SelectBox():
         self.y = y
         self.w = w
         self.h = h
-        self.rect = pg.Rect(self.x, self.y, self.w, self.h)
         self.color = (192, 192, 192)
         
         # select control
@@ -134,13 +133,11 @@ class SelectBox():
         self.y = y
         self.w = w
         self.h = h
-        self.rect = pg.Rect(self.x, self.y, self.w, self.h)
-    
+
     def update_pos(self,x,y):
         self.x = x
         self.y = y
-        self.rect = pg.Rect(self.x, self.y, self.w, self.h)        
-    
+       
     def update_select_method(self, keep_select):
         self.keep_select = keep_select
         
@@ -167,6 +164,7 @@ class SelectBox():
     def draw(self, screen, thick = 2, is_select = False):
         # Blit the rect.
         rect = pg.Rect(self.x, self.y, self.w, self.h)
+        rect.topleft = (self.x, self.y)
         pg.draw.rect(screen, self.color, rect, thick)
         
         if is_select:

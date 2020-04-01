@@ -7,19 +7,20 @@ import function as fn
 from function import GameControl
 
 from img import WorldMap, grid
-from feature import City, Player, InfectionCard, Tip
+from feature import City, Player, InfectionCard, Tip, PlayerCard
 from feature import Scientist, Researcher, Medic, Dispatcher, OperationsExpert
 import color as color
 
+FPS = 30
 
 pg.init()
 settings = Settings()
-    
+ 
 screen = pg.display.set_mode((settings.screen_width,
                                       settings.screen_height))
 pg.display.set_caption("Pandemic")
 
-WorldMap = WorldMap(screen, os.getcwd() + '\\img\\world.png')
+WorldMap = WorldMap(screen, os.getcwd() + '\\img\\world.jpg')
 grid = grid(screen)
 
 
@@ -97,8 +98,7 @@ while not play_setup_done:
 Players = [ chara_pool[chara] for chara in chara_pick]
 
 '''
-
-
+test = PlayerCard(x = 50, y=50, name = 'text', color = 'b')
 
 # all player start form 'atlanta'
 for i, player in enumerate(Players):
@@ -110,13 +110,17 @@ GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, Tips
 
 
 InfectionCard.active_draw()
+
+
+clock = pg.time.Clock()
   
 for i in [1, 1, 1, 2, 2, 2, 3, 3, 3]:
 
     rtn_draw, rtn_discard = '',''
     while not rtn_draw:
 
-        GameControl.display()
+#### debug testing        
+        GameControl.display(test)
     
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -126,14 +130,21 @@ for i in [1, 1, 1, 2, 2, 2, 3, 3, 3]:
             rtn_draw, rtn_discard = GameControl.even_control_infection(event)
             GameControl.even_control_player(event)
             GameControl.even_control_city(event)
+
+#### debug testing            
+            GameControl.event_control_debut(event, test)
         
         # even respond
         GameControl.event_respond_infection_initial(rtn_draw, rtn_discard,i)
 
-        #print(len(InfectionCard.discards))
-        #print(InfectionCard.discards)
-
+    clock.tick(FPS)
+    
 InfectionCard.deactive_draw()
+if len(InfectionCard.discards) >9:
+    for city in InfectionCard.discards:
+        print(city)
+        print(cities[city].dis)
+        
 
 
 
@@ -161,6 +172,7 @@ while game_on:
     # even respond
     GameControl.event_respond_infection(rtn_draw, rtn_discard)
     
+    clock.tick(FPS)
 
     
 pg.quit()

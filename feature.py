@@ -112,7 +112,6 @@ class City():
                                         self.pos[1] + pos[1]*9 ))
 
 
-# adding the rest of each disease's cube
 class InfectionCard():
     def __init__(self,city_ls, rate):
         self.cards = city_ls.copy()
@@ -173,8 +172,6 @@ class InfectionCard():
 
         return rtn_draw, rtn_discard
 
-            
-  
     def display(self, screen):
         # need to know when the play's round end > to draw card
         # need to know when to re-shuffle discard pile > when pick up a epdimac card
@@ -191,6 +188,9 @@ class InfectionCard():
             pg.draw.rect(screen, self.color, self.draw_rect, 5)
         
         # display discard part
+        if self.discards:
+            pg.draw.rect(screen, (0, 155, 0), self.discard_rect, 0)        
+        
         city_name = string.capwords(self.discard_txt).split()
         for i, txt in enumerate(city_name):
             txt_surface = FONT_notpick.render(txt, True, color.BLACK)
@@ -206,10 +206,64 @@ class InfectionCard():
         return card
 
 
-
 class PlayerCard():
-    def __init__(self):
-        pass
+    def __init__(self, x,y, name, color, describe = ''):
+        self.x = x
+        self.y = y
+
+        self.name = name
+        self.describe = describe
+        self.color = color
+        self.img_size = [40,80]
+        
+        # for dragging
+        self.drag = False
+        self.offset_x = 0
+        self.offset_y = 0
+        
+        # image
+        image = pg.image.load(os.getcwd() + '\\img\\playercard_' + self.color +'.png')
+        self.image = pg.transform.scale(image,self.img_size)        
+        self.image_rect = self.image.get_rect(topleft = (self.x, self.y))
+        
+        # card name
+        font = pg.font.SysFont('Calibri', 15, True, False)
+        text = font.render(self.name, True, (0, 0, 0))
+        self.text = pg.transform.rotate(text, -90) 
+               
+    def update_pos(self,x,y):
+        self.x = x
+        self.y = y
+        self.image_rect.topleft = (x,y)
+
+    def handle_event(self,event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if event.button == 1: 
+                if self.image_rect.collidepoint(event.pos):
+                    self.drag = True
+                    mouse_x, mouse_y = event.pos
+                    self.offset_x = self.image_rect.x - mouse_x
+                    self.offset_y = self.image_rect.y - mouse_y
+
+        elif event.type == pg.MOUSEBUTTONUP:
+            if event.button == 1:
+                self.drag = False
+        
+        elif event.type == pg.MOUSEMOTION:
+            if self.drag:
+                mouse_x, mouse_y = event.pos
+                self.image_rect.x = mouse_x + self.offset_x
+                self.image_rect.y = mouse_y + self.offset_y
+        
+    def display(self,screen):
+        
+        
+        screen.blit(self.image, self.image_rect)
+        
+        text_rect = self.text.get_rect(topright= (self.image_rect.x + self.img_size[0],
+                                                     self.image_rect.y + 8 ))
+        screen.blit(self.text, text_rect)        
+
 
 class Player():
     def __init__(self):
@@ -349,7 +403,7 @@ class Scientist(Player):
         self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
         self.color = color.Scientist
         self.key = 'Scientist'
-        self.discribe = ['> Need only four card for cure']
+        self.discribe = ['> Need only four cards for cure']
         
         self.playbox.update_unselect_color(color.Scientist)
               
@@ -379,7 +433,7 @@ class Medic(Player):
         self.color = color.Medic
         self.key = 'Medic'
         self.discribe = [' > Remove all the same disease in the city when you treat',
-                       ' > If the cure is found, no need to cause for treat']        
+                       ' > If the cure is found, no need to cost action for treat']        
         
         self.playbox.update_unselect_color(color.Medic)
         

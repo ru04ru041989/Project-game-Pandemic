@@ -225,7 +225,7 @@ class GameControl():
         self.rsp_player = ''
         self.rsp_city = ''
 
-    def display(self):
+    def display(self, debug = ''):
         
         def update_Tip():
             # for player
@@ -274,15 +274,19 @@ class GameControl():
         # draw tips
         # player tips
 
-        update_Tip()
+    #    update_Tip()
                     
-        for Tip in self.Tips.values():
-            Tip.display(self.screen)
+    #    for Tip in self.Tips.values():
+    #        Tip.display(self.screen)
         
+    #    debug.display(self.screen)
         #self.grid.draw()
     
         # visualiaze the window
         pg.display.flip()    
+
+    def event_control_debut(self,event, debug = ''):
+        debug.handle_event(event)
 
     def even_control_infection(self,event):
         rtn_draw, rtn_discard = self.InfectionCard.handle_event(event)
