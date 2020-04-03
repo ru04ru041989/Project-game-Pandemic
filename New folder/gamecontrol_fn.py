@@ -1,6 +1,7 @@
 import sys
 import csv
 import random
+import time
 
 from basic_feature import*
 from feature import*
@@ -126,11 +127,12 @@ def initial_player_card(cities):
     player_card = []
     for city in cities:
         card = PlayerCard(cities[city])
-        card.add_discribe(['1. Discard this card to move to this city', '2. Discard this card to move to any city if you are in this city'])
+        card.add_discribe(['1. Discard this card to move to this city', 
+                           '2. Discard this card to move to any city if you are in this city'])
         player_card.append(card)
 
     player_card_img = ImgBox(x=player_card_img_pos[0], y=player_card_img_pos[1],
-                                w=player_card_size[0], h=player_card_size[1])
+                                w=player_card_size[0], h=player_card_size[1], thick = 5, color=RED)
     player_card_img.add_img(filename = '\\img\\playercard.png', size = player_card_size, to_center=False)
 
     player_card_discard = SelectBox(x= player_card_img_pos[0] + player_card_size[0]+10, y=player_card_img_pos[1],
@@ -155,10 +157,28 @@ def initial_tip():
 
 
     
-def player_get_card(game_control, player, card):
-    if not game_control['is_player_get_card']:
+def player_get_card(game_control, OK_bottom, player, player_card, player_card_active):
+    # if ok, then next step
+    if OK_bottom.rtn_click():
+        if game_control['is_player_get_card_phase']:
+            game_control['is_player_get_card_phase'] = False
+            game_control['is_player_get_card'] = True      
+    
+    # draw player card
+    if game_control['is_player_get_card']:
+        card = player_card.pop()
+        player_card_active.append(card)
+        
+    # add to player's hand
+    if game_control['is_player_get_card']:
         player.add_hand(card)
-        game_control['is_player_get_card'] = True
+        game_control['is_player_get_card'] = False
+        # disable OK
+        OK_bottom.set_select(False)
+#--------------------------------------------------------------debug, let infect city after play draw  
+        OK_bottom.unclick()
+        game_control['is_infection_phase'] = True
+
 
 def infect_city(game_control, OK_bottom, cities, disease, infection_card, infection_discard, repeat = 1):
     # if ok, then next step
@@ -180,7 +200,13 @@ def infect_city(game_control, OK_bottom, cities, disease, infection_card, infect
         game_control['is_infect_city'] = False
         # disable OK bottom
         OK_bottom.set_select(False)
+#--------------------------------------------------------------debug, let play draw after infect city
+        OK_bottom.unclick()
+        game_control['is_player_get_card_phase'] = True        
 
+        
+        
+        
 
 # player move
 def treat_city(cities, disease, city_name, disease_color, cure):

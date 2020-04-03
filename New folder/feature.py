@@ -218,6 +218,9 @@ class ControlBottom():
     def set_select(self, select):
         self.select = select
 
+    def unclick(self):
+        self.area.click = False
+    
     def rtn_click(self):
         return self.area.rtn_click()
     

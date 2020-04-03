@@ -39,6 +39,8 @@ players = initial_player(cities)
 
 # player card
 player_card, player_card_img, player_card_discard = initial_player_card(cities)
+player_card_active = []
+player_discard = []
 
 # tips and control bottom
 tips = initial_tip()
@@ -48,15 +50,12 @@ OK_bottom = ControlBottom()
 #####################
 
 # set up game control
-game_control = {'is_infection_phase': True,
+game_control = {'is_infection_phase': False,
                 'is_infect_city' : False, 
                 
+                'is_player_get_card_phase' : True,
                 'is_player_get_card' : False
                 }
-
-for v in game_control.values():
-    if v:
-        OK_bottom.set_select(True)
 
 ##########################
 # test: let the first city get infection
@@ -86,9 +85,11 @@ while game_on:
         infection_discard[-1].display(screen)
         
     # player card
+    player_card_img.update_select(game_control['is_player_get_card_phase'])
     player_card_img.display(screen)
     player_card_discard.display(screen)
-    player_card[1].display(screen)
+    
+#    player_card[1].display(screen)
             
     # infection indicater
     infection_rate_text.display(screen)
@@ -115,6 +116,11 @@ while game_on:
     # tips
     for tip in tips:
         tips[tip].display(screen)
+
+    # game control
+    for v in game_control.values():
+        if v:
+            OK_bottom.set_select(True)
     OK_bottom.display(screen)
 
 ### event
@@ -140,20 +146,19 @@ while game_on:
             infection_discard[-1].handle_event(event)
         
         active_player_card = ''
-        for card in player_card:
+        for card in player_card_active:
             card.handle_event(event)
             if card.rtn_active():
                 active_player_card = card
-                
-            
+    
     #----------------------------------- using ok bottom click as moving marker to next step
         #check if OK got click
         OK_bottom.area.handle_event(event)
     #---------------------------------------------------------------------------------
-        
+    
+
         
 ### after event
-
 
     # if click on infection card or play card
     rtn_infection_card = ''
@@ -175,8 +180,9 @@ while game_on:
 
 ### game control > those function only executive once till next round
     # add player card to hands
-    player_get_card(game_control, players[0], player_card[0])
-    
+    player_get_card(game_control,OK_bottom, players[0], player_card, player_card_active)
+
+
     #-------------------------------------------------------------------------------- actually infect the city
     # infect city
     infect_city(game_control, OK_bottom, cities, disease, infection_card, infection_discard, repeat=3)
