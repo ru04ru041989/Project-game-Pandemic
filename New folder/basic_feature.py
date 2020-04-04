@@ -232,14 +232,15 @@ class WordBox(SelectBox):
         else:
             content = content_fit(content=self.org_text, size = 35)
             for txt in content:
-                if self.displayis_cap:
-                    text = self.font.render(string.capwords(txt), True, self.color)
+                if self.is_cap:
+                    text = self.font.render(string.capwords(txt), True, self.text_color)
                 else:
-                    text = self.font.render(txt, True, self.color)
+                    text = self.font.render(txt, True, self.text_color)
                 if self.to_center:
                     text_rect = text.get_rect(center = self.rect.center)
                 else:
                     text_rect = text.get_rect(topleft = self.rect.topleft)
+                    
                 screen.blit(text, text_rect)
         
         if self.active or select:

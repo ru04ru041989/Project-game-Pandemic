@@ -12,6 +12,9 @@ map_size = (1080,640)
 #-----------------------------------
 city_size = (28,28)
 #-----------------------------------
+lab_size = (60,60)
+lab_indicater_pos = (25,460)
+#-----------------------------------
 disease_size = (8,8)
 disease_summary_pos = (700,50)
 disease_summary_size = (50,20)
@@ -61,5 +64,5 @@ color_Scientist = (128, 128, 128)
 infect_rate = 2
 expose_time = 0
 cure = {'r':False, 'b':False, 'k':False, 'y':False}
-building = 6
-dis_cube_num = 24
+lab_num = 6
+dis_cube_num = {'r':24, 'b':24, 'k':24, 'y':24}

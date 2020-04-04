@@ -22,6 +22,8 @@ class City(ImgBox):
         self.txt_no_select_size = 12
         self.txt_select_size = 16
         
+        self.lab = ''
+        
         self.disease = {'r':[], 'b':[], 'k':[], 'y':[]}
         
     def add_link(self, city):
@@ -38,13 +40,26 @@ class City(ImgBox):
             return self.disease[dis_color].pop()
         else:
             return ''
-    
-    def display_link(self, screen):
+
+    def build_lab(self, lab):
+        lab.update_pos(self.x-lab_size[0]*0.5, self.y-lab_size[1]*0.5)
+        self.lab = lab
+
+    def rm_lab(self):
+        lab = self.lab
+        self.lab = ''
+        return lab
+
+    def display_before(self, screen):
+        if self.lab:
+            self.lab.display(screen)  
+                  
         # draw link
         for link in self.link:
             link.display(screen)  
-              
-    def display_cityname(self, screen):
+
+
+    def display_after(self, screen):
         # draw city name
         txt_size = self.txt_select_size if self.active else self.txt_no_select_size
         font = pg.font.SysFont('Calibri', txt_size, True, False)
@@ -55,7 +70,7 @@ class City(ImgBox):
         
         screen.blit(text, text_rect)
 
-    def display_disease(self, screen):
+        #
         diseases = []
         for vs in self.disease.values():
             for v in vs:
@@ -73,29 +88,47 @@ class City(ImgBox):
                 disease.display(screen)
                 y += h
             x += w
+
+
+class Lab():
+    def __init__(self):
+        area = ImgBox(x=0,y=0,w=lab_size[0],h=lab_size[1])
+        area.add_img(filename = '\\img\\lab.png', size = lab_size)
+        self.area = area
+    
+    def update_pos(self, x,y):
+        self.area.update_pos(x,y) 
+    
+    def display(self, screen):
+        self.area.display(screen)
         
         
 class InfectionCard():
     def __init__(self, city):
-        area = SelectBox(x= infection_card_img_pos[0] + infection_card_size[0]+10, 
-                        y=infection_card_img_pos[1],
-                        w=infection_card_size[0]+10, 
-                        h=infection_card_size[1]+10, 
+        area = SelectBox(x= infection_card_img_pos[0] + infection_card_size[0]*0.2, 
+                        y=infection_card_img_pos[1]+ infection_card_size[0]*0.2,
+                        w=infection_card_size[0], 
+                        h=infection_card_size[1], 
                         keep_active=False, thick=0)
         area.update_color((0, 175, 0))
         self.area = area
         
-        x,y = area.rect.center
+        x,y = area.rect.topleft
         area_text = WordBox(x= x , y=y,
                        w=infection_card_size[0], h=infection_card_size[1])
         
-        area_text.add_text(text=city.txt, size = 16, color = BLACK)
+        area_text.add_text(text=city.txt, size = 16, color = BLACK, as_rect=False)
 
 
         self.name = city.txt
         
         self.area_text = area_text
-    
+
+    def update_pos(self,x,y):
+        self.area.update_pos(x,y)
+        text_x,text_y = self.area.rect.topleft
+        self.area_text.update_pos(text_x,text_y)
+
     def handle_event(self,event):
         self.area.handle_event(event)
 
@@ -113,7 +146,7 @@ class InfectionCard():
 class PlayerCard():
     def __init__(self, city):
 
-        area = SelectBox(x= player_card_img_pos[0] + player_card_size[0]*0.5, 
+        area = SelectBox(x= player_card_img_pos[0] + player_card_size[0]*0.2, 
                         y=player_card_img_pos[1] + player_card_size[1]*0.2,
                         w=player_card_size[0], 
                         h=player_card_size[1], 
@@ -155,6 +188,27 @@ class PlayerCard():
     def display(self,screen):
         self.area.display(screen, is_rect=True, active_off=True)
         self.area_text.display(screen)
+
+
+class DiseaseSummary():
+    def __init__(self):
+        area_text = WordBox(w=disease_summary_size[0], h=disease_summary_size[1])
+               
+        self.area_text = area_text
+        self.num = 0
+
+    def update_pos(self,x,y):
+        self.area_text.update_pos(x,y)
+    
+    def add_fill_color(self, color):
+        self.area_text.add_fill_color(color)
+        
+    def update_num(self, num):
+        self.num = num
+        self.area_text.add_text(text= str(self.num), size=18, color=BLACK, as_rect=False)
+        
+    def display(self, screen):
+        self.area_text.display(screen, is_fill = True)
         
 
 class Tip():
@@ -175,12 +229,13 @@ class Tip():
         self.area_text.update_pos(x-w*0.5,y-h*0.5)
         self.area_text.update_wh(w,h)       
     
-    def update_text(self, title='', title_size = 14, body='', body_size = 10, 
+    def update_text(self, title='', title_size = 14, title_color = BLACK,
+                    body='', body_size = 10, body_color = BLACK,
                     line_space = 15, indent = 50, fit_size = 35, n_col=1):
         if title:
-            self.area_text.add_title(title=title, size = title_size, color=BLACK)
+            self.area_text.add_title(title=title, size = title_size, color=title_color)
         if body:
-            self.area_text.add_body(body=body, size = body_size, color=BLACK, 
+            self.area_text.add_body(body=body, size = body_size, color=body_color, 
                                     line_space = line_space, indent = indent, fit_size = fit_size, n_col=n_col)
 
     def del_text(self):
