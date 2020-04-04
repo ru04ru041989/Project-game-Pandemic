@@ -173,6 +173,10 @@ def initial_tip():
 
     
 def player_get_card(game_control, OK_bottom, player, player_card, player_card_active, cur_player_card, tips):
+    # check if the game_control handle is correct
+    if game_control.get(['id']) != 'player_draw':
+        return
+    
     # if ok, then next step
     if OK_bottom.rtn_click():
         if game_control['is_player_get_card_phase'][0]:
@@ -218,13 +222,27 @@ def player_get_card(game_control, OK_bottom, player, player_card, player_card_ac
         # disable OK
         OK_bottom.set_select(False)
         game_control['is_player_get_card'][1] = False
-#--------------------------------------------------------------debug, let infect city after play draw  
+        
+        # check if need to repeat
+        game_control['player_get_card_phase_rep'] -= 1
+        if game_control['player_get_card_phase_rep'] != 0:
+            # repeat the process
+            game_control['is_player_get_card_phase'][0] = True
+        else:
+#--------------------------------------------------------------debug, (structure is different now)  
+            # re-set the repeat, and move on the the next one
+            game_control['player_get_card_phase_rep'] = player_card_per_round
+            #game_control['is_infection_phase'][0] = True
         OK_bottom.unclick()
-        game_control['is_infection_phase'][0] = True
+        
 
 
 def infect_city(game_control, OK_bottom, cities, disease, infection_card, infection_discard, cur_infection_card, 
-                disease_cube_summary, tips, repeat = 1):
+                disease_cube_summary, tips, infect_rate, repeat = 1):
+    # check if the game_control handle is correct
+    if game_control.get(['id']) != 'infect_city':
+        return    
+    
     # if ok, then next step
     if OK_bottom.rtn_click():
         if game_control['is_infection_phase'][0]:
@@ -264,19 +282,26 @@ def infect_city(game_control, OK_bottom, cities, disease, infection_card, infect
             cities[city_name].infect(cities[city_name].ctcolor, disease[cities[city_name].ctcolor].pop())
             cities[city_name].update_active(True)
         
-    # update dis_cube_num
+        # update dis_cube_num
         cur_num = disease_cube_summary[cities[city_name].ctcolor].num
-        
         disease_cube_summary[cities[city_name].ctcolor].update_num(cur_num - repeat)
         
+        # disable OK bottom
+        OK_bottom.set_select(False)
         game_control['is_infect_city'][1] = False
         
-        
-    # disable OK bottom
-        OK_bottom.set_select(False)
-#--------------------------------------------------------------debug, let play draw after infect city
+        # check if need to repeat
+        game_control['infection_phase_rep'] -= 1
+        if game_control['infection_phase_rep'] != 0:
+            # repeat the process
+            game_control['is_infection_phase'][0] = True
+        else:        
+#--------------------------------------------------------------debug, (structure is different now)
+            # re-set the repeat, and move on the the next one
+            game_control['infection_phase_rep'] = infect_rate
+            #game_control['is_player_get_card_phase'][0] = True
         OK_bottom.unclick()
-        game_control['is_player_get_card_phase'][0] = True        
+                
 
         
         

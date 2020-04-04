@@ -59,10 +59,89 @@ color_Scientist = (128, 128, 128)
 
 
 
-###########################3
+###########################
 # game setting
 infect_rate = 2
 expose_time = 0
+player_card_per_round = 2
 cure = {'r':False, 'b':False, 'k':False, 'y':False}
 lab_num = 6
 dis_cube_num = {'r':24, 'b':24, 'k':24, 'y':24}
+
+
+###########################
+# game control
+
+'''
+some though of control the overall step
+use list(game_control.keys()) to get all the main step
+having another function / or in the each main step function
+    at the end of the process, 
+        > indicate the index of the next main step in the list
+        > ......or the key name, an use list.index(key_name) to lociate the process
+
+to do this, need a global main step indicater
+
+'''
+
+
+game_control = {
+    'initial_infection1': initial_infection1,
+    'initial_infection2': initial_infection2,
+    'initial_infection3': initial_infection3,
+    'normal_infection': normal_infection, 
+    'player_draw': player_draw         
+}
+
+infection_disease_num ={
+    'initial_infection1':3
+    'initial_infection2':2
+    'initial_infection3':1
+    'normal_infection':1
+    'expose_infection':3
+}
+
+initial_infection1 = {
+    'id': 'infect_city',
+    'infection_phase_rep': 3,
+    'is_infection_phase': [False, False],
+    'is_infect_city' : [False, False]    
+}
+
+initial_infection2 = {
+    'id': 'infect_city',
+    'infection_phase_rep': 3,
+    'is_infection_phase': [False, False],
+    'is_infect_city' : [False, False]    
+}
+
+initial_infection3 = {
+    'id': 'infect_city',
+    'infection_phase_rep': 3,
+    'is_infection_phase': [False, False],
+    'is_infect_city' : [False, False]    
+}
+
+normal_infection = {
+    'id': 'infect_city'
+    'infection_phase_rep': infect_rate,
+    'is_infection_phase': [False, False],
+    'is_infect_city' : [False, False]    
+}
+
+#------------------------------------------------------------debug, start from player_draw
+player_draw = {
+    'id': 'player_draw'
+    'player_get_card_phase_rep': player_card_per_round,
+    'is_player_get_card_phase' : [True, False],
+    'is_player_draw_card' : [False, False],
+    'is_player_get_card' : [False, False]
+}
+
+
+
+
+
+
+
+

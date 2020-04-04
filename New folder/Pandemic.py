@@ -38,7 +38,7 @@ cur_infection_card = ''
 
 # infection indicater
 lab_indicater, infection_rate_text, expose_time_text = initial_indicater(infect_rate, expose_time, labs)
-cur_infection_rate, cur_expose_time = infect_rate, expose_time
+cur_infect_rate, cur_expose_time = infect_rate, expose_time
 cur_lab_num = len(labs)
 
 # players
@@ -57,13 +57,15 @@ OK_bottom = ControlBottom()
 #####################
 
 # set up game control
-game_control = {'is_infection_phase': [False, False],
-                'is_infect_city' : [False, False], 
+#game_control = {'infection_phase_rep': infect_rate,
+#                'is_infection_phase': [False, False],
+#                'is_infect_city' : [False, False], 
                 
-                'is_player_get_card_phase' : [True, False],
-                'is_player_draw_card' : [False, False],
-                'is_player_get_card' : [False, False]
-                }
+#                'player_get_card_phase_rep': player_card_per_round,
+#                'is_player_get_card_phase' : [True, False],
+#                'is_player_draw_card' : [False, False],
+#                'is_player_get_card' : [False, False]
+#                }
 
 ##########################
 # test: let the first city get infection
@@ -100,8 +102,10 @@ while game_on:
             
     # indicater
     # update indicater
-    if cur_infection_rate != infect_rate or cur_expose_time != expose_time or cur_lab_num != len(labs):
+    if cur_infect_rate != infect_rate or cur_expose_time != expose_time or cur_lab_num != len(labs):
         lab_indicater, infection_rate_text, expose_time_text = initial_indicater(infect_rate, expose_time, labs)
+        cur_infect_rate, cur_expose_time = infect_rate, expose_time
+        cur_lab_num = len(labs)
     
     lab_indicater.display(screen)
     infection_rate_text.display(screen)
@@ -180,7 +184,8 @@ while game_on:
 ### game control > those function only executive once till next round
     # draw player phase, show the card, add player card to hands
     
-    cur_player_card_temp = player_get_card(game_control,OK_bottom, players[0], player_card, player_card_active, cur_player_card,tips)
+    cur_player_card_temp = player_get_card(game_control['player_draw'], OK_bottom, 
+                                           players[0], player_card, player_card_active, cur_player_card,tips)
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
     if cur_player_card:
@@ -188,8 +193,10 @@ while game_on:
 
     #-------------------------------------------------------------------------------- actually infect the city
     # infect city
-    cur_infection_card_temp = infect_city(game_control, OK_bottom, cities, disease, infection_card, infection_discard, cur_infection_card,
-                                        disease_cube_summary,tips, repeat=3)
+    cur_infection_card_temp = infect_city(game_control['normal_infection'], OK_bottom, cities, disease, 
+                                          infection_card, infection_discard, cur_infection_card,
+                                        disease_cube_summary,tips,cur_infect_rate, 
+                                        repeat=infection_disease_num['normal_infection'])
     if cur_infection_card_temp:
         cur_infection_card = cur_infection_card_temp
     if cur_infection_card:
