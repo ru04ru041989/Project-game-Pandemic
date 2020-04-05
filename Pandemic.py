@@ -1,178 +1,247 @@
 import sys
-import os
+import csv
+import random
+
 import pygame as pg
+from paramater import *
 
-from settings import Settings
-import function as fn
-from function import GameControl
-
-from img import WorldMap, grid
-from feature import City, Player, InfectionCard, Tip, PlayerCard
-from feature import Scientist, Researcher, Medic, Dispatcher, OperationsExpert
-import color as color
+# from basic_feature import*
+# from feature import*
+from gamecontrol_fn import *
 
 FPS = 30
 
 pg.init()
-settings = Settings()
- 
-screen = pg.display.set_mode((settings.screen_width,
-                                      settings.screen_height))
+
+# prepare screen 
+screen = pg.display.set_mode((screen_width, screen_height))
 pg.display.set_caption("Pandemic")
 
-WorldMap = WorldMap(screen, os.getcwd() + '\\img\\world.jpg')
-grid = grid(screen)
+# prepare world
+WorldMap = initial_map(map_size)
 
+# prepare city
+cities, cities_ls = initial_city(city_size)
 
-# set backgroud color
-bg_color = settings.bg_color
+# prepare labs
+labs = initial_lab()
+cities['atlanta'].build_lab(labs.pop())
+# prepare disease
+disease, find_cure = initial_disease(dis_cube_num, disease_size)
+disease_cube_summary, disease_cube_summary_title = initial_disease_summary()
 
-# city list
-city_size = (28,28)
-cities, cities_ls = fn.cities_setup('city_map.csv','city_link.csv', city_size)
+# infection card
+infection_card, infection_card_img, infection_discard_img = initial_infection_card(cities)
+infection_discard = []
+cur_infection_card = ''
 
-# initial game setting
-infect_rate = 2
-expose_time = 0
-vaccine = {'r':False, 'b':False, 'k':False, 'y':False}
-building = 6
-dis_cube_r = 24
-dis_cube_b = 24
-dis_cube_k = 24
-dis_cube_y = 24
+# infection indicater
+lab_indicater, infection_rate_text, expose_time_text = initial_indicater(infect_rate, expose_time, labs)
+cur_infect_rate, cur_expose_time = infect_rate, expose_time
+cur_lab_num = len(labs)
 
-# shuffle infection card,
-InfectionCard = InfectionCard(cities_ls, infect_rate)
-     
-    
-    # shuffle city card and special card
-    #   distribute card to players, 4p, 2 cards; 3p, 3 cards; 2p, 4 cards
-    #   depend on the level, seperate the rest of the card to different part,
-    #       add epidemic card to each part
-    #       shuffle each part and add together into a pile
+# players
+players = initial_player(cities)
 
+# player card
+player_card, player_card_img, player_card_discard = initial_player_card(cities)
+player_card_active = []
+player_discard = []
+cur_player_card = ''
 
+# tips
+tips = initial_tip()
 
-max_player = 5
+# control bottom
+OK_bottom = ControlBottom('OK', OK_bottom_pos, OK_bottom_size)
+USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 
-sci = Scientist()
-res = Researcher()
-med = Medic()
-ope = OperationsExpert()
-dip = Dispatcher()
+#####################
+#####################
 
-chara_pool = [sci, res, med, ope, dip]
+# set up game control
 
-city_tip = Tip(10,10,300,60, color.WHITE, interval = 20, textsize=10)
-chara_tip = Tip(1090, 620, 260 , 170, color.WHITE, interval = 35)
-Tips = {'player': chara_tip, 'city': city_tip}
+game_control = initial_game_control()
 
+# first event = initial_infection1---------------------------debug mode, start at normal infection
+assign_next_step(game_control, 'normal_infection')
 
-setting_para = (80,150,670)
-input_box = fn.InputBox(settings.screen_width // 2 + 250, setting_para[0]-10 , 50, 32)
-
-chara_para = [[50,200], [1200,400]]
-
-chara_box = fn.chara_setup(screen, chara_pool, chara_para[0], chara_para[1])
-
-
-''' debug mode, get to the main setting'''
-Players = [ chara for chara in chara_pool]
-'''
-
-play_setup_done = False
-pos_input = []
-# initial setting loop
-while not play_setup_done:
-    screen.fill(bg_color)
-    
-    play_setup_done, chara_pick= \
-        fn.player_setup(screen, input_box, chara_box, pos_input, setting_para, max_player)
-    
-    pg.display.update() 
-
-
-# game initial setting (only run once)
-# ======================================================
-# setup player
-Players = [ chara_pool[chara] for chara in chara_pick]
 
 '''
-test = PlayerCard(x = 50, y=50, name = 'text', color = 'b')
-
-# all player start form 'atlanta'
-for i, player in enumerate(Players):
-    player.playerNO_update(i+1)
-    player.city_update(cities['atlanta'])
-
-
-GameControl = GameControl(screen, cities, Players, InfectionCard, WorldMap, Tips, grid)
-
-
-InfectionCard.active_draw()
-
+for k, v in game_control.items():
+    print(k)
+    print(v.id)
+    print(v.paramater)
+    print(v.action)
+    print('--------')
+'''
+######################################################
+######################################################
+# game start
 
 clock = pg.time.Clock()
-  
-for i in [1, 1, 1, 2, 2, 2, 3, 3, 3]:
 
-    rtn_draw, rtn_discard = '',''
-    while not rtn_draw:
-
-#### debug testing        
-        GameControl.display(test)
-    
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                sys.exit()
-        
-            # event control
-            rtn_draw, rtn_discard = GameControl.even_control_infection(event)
-            GameControl.even_control_player(event)
-            GameControl.even_control_city(event)
-
-#### debug testing            
-            GameControl.event_control_debut(event, test)
-        
-        # even respond
-        GameControl.event_respond_infection_initial(rtn_draw, rtn_discard,i)
-
-    clock.tick(FPS)
-    
-InfectionCard.deactive_draw()
-if len(InfectionCard.discards) >9:
-    for city in InfectionCard.discards:
-        print(city)
-        print(cities[city].dis)
-        
-
-
-
-
-# game loop
 game_on = True
 while game_on:
-    
-    #fn.control_infection(screen, cities, Players, InfectionCard, WorldMap, grid)
-    GameControl.display()
-    
+
+    screen.fill(bg_color)
+    WorldMap.display(screen)
+
+    # infection card
+    infection_card_img.update_select(game_control['normal_infection'].rtn_action_active()[0])
+    infection_card_img.display(screen)
+    infection_discard_img.display(screen)
+
+    if infection_discard:
+        infection_discard[-1].display(screen)
+
+    # player card
+    player_card_img.update_select(game_control['player_draw'].rtn_action_active()[0])
+    player_card_img.display(screen)
+    player_card_discard.display(screen)
+
+    # indicater
+    # update indicater
+    if cur_infect_rate != infect_rate or cur_expose_time != expose_time or cur_lab_num != len(labs):
+        lab_indicater, infection_rate_text, expose_time_text = initial_indicater(infect_rate, expose_time, labs)
+        cur_infect_rate, cur_expose_time = infect_rate, expose_time
+        cur_lab_num = len(labs)
+
+    lab_indicater.display(screen)
+    infection_rate_text.display(screen)
+    expose_time_text.display(screen)
+
+    # disease summary
+    disease_cube_summary_title.display(screen, is_fill=True)
+    for summary in disease_cube_summary.values():
+        summary.display(screen)
+
+    for cure in find_cure.values():
+        cure.display(screen, is_fill=True)
+
+    # city
+    for city in cities:
+        cities[city].display_before(screen)
+    for city in cities:
+        cities[city].display(screen)
+        cities[city].display_after(screen)
+
+    # player
+    for player in players:
+        player.display(screen)
+
+    # tips
+    for tip in tips:
+        tips[tip].display(screen)
+
+    # game control
+    for val in game_control.values():
+        for v in val.rtn_action_active():
+            if v:
+                OK_bottom.set_select(True)
+    OK_bottom.display(screen)
+    USE_bottom.display(screen)
+
+    ### event
     for event in pg.event.get():
         if event.type == pg.QUIT:
             sys.exit()
-        
-        elif event.type == pg.MOUSEBUTTONDOWN:
-            pos = pg.mouse.get_pos()
-            grid.update(pos)
-        
-        # even control
-        rtn_draw, rtn_discard = GameControl.even_control_infection(event)
-        GameControl.even_control_player(event)
-        GameControl.even_control_city(event)
-    
-    # even respond
-    GameControl.event_respond_infection(rtn_draw, rtn_discard)
-    
-    clock.tick(FPS)
 
-    
+        active_city = ''
+        for city in cities:
+            # re-set select
+            cities[city].update_select(False)
+            cities[city].handle_event(event)
+            if cities[city].rtn_active():
+                active_city = cities[city]
+
+        active_player = ''
+        for player in players:
+            player.pawn.handle_event(event)
+            player.area.handle_event(event)
+            if player.rtn_active():
+                active_player = player
+                # let the city where this player on also active
+                active_player.city.update_select(True)
+
+
+        if infection_discard:
+            infection_discard[-1].handle_event(event)
+
+        if cur_infection_card:
+            cur_infection_card.handle_event(event)
+
+        active_player_card = ''
+        for card in player_card_active:
+            card.handle_event(event)
+            if card.rtn_active():
+                active_player_card = card
+
+        # ----------------------------------- using ok bottom click as moving marker to next step
+        # check if OK got click
+        OK_bottom.area.handle_event(event)
+
+        #------------------------------------ using use bottom click to see if want to use special card
+        # check if active_player_card is special card
+        USE_bottom.set_select(False)
+        if active_player_card:
+            if active_player_card.type == 'special':
+                # active USE_bottom
+                USE_bottom.set_select(True)
+                USE_bottom.display(screen)
+                # keep track if USE click
+                USE_bottom.area.handle_event(event)
+    # ---------------------------------------------------------------------------------
+
+    ### after event
+
+    cur_player_card_temp = player_get_card(OK_bottom,
+                                           players[0], player_card, player_card_active, cur_player_card, tips,
+                                           game_control, cur_step='player_draw', next_step='normal_infection')
+    if cur_player_card_temp:
+        cur_player_card = cur_player_card_temp
+    if cur_player_card:
+        cur_player_card.display(screen)
+
+    #----------------------------------------------------------if this player card is an expose card...
+
+
+    cur_infection_card_temp = infect_city(OK_bottom,
+                                          cities, disease, infection_card, infection_discard,
+                                          cur_infection_card,
+                                          disease_cube_summary, tips,
+                                          game_control)
+
+    if cur_infection_card_temp:
+        cur_infection_card = cur_infection_card_temp
+    if cur_infection_card:
+        cur_infection_card.display(screen)
+
+        # ---------------------------------------------------------------------------------
+
+    # if click on infection card or play card
+    rtn_infection_card = ''
+    if infection_discard:
+        rtn_infection_card = infection_discard[-1].rtn_target()
+
+    cur_infection_city = cur_infection_card.rtn_target() if cur_infection_card else ''
+
+    rtn_player_card = ''
+    if active_player_card:
+        if active_player_card.type == 'city':
+            rtn_player_card = active_player_card.rtn_target()
+
+    # activate the city
+    hightlight_city(cities, rtn_infection_card, rtn_player_card, cur_infection_city)
+
+    # update info
+    # -----------------------------------------------------------------------------
+    # tip update
+    city_tip_update(tips, target=active_city, screen=screen)
+    player_tip_update(tips, player_target=active_player,
+                      player_card_target=active_player_card, screen=screen)
+
+    clock.tick(FPS)
+    pg.display.flip()
+
 pg.quit()

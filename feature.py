@@ -1,295 +1,364 @@
 import os
 import string
-import random
 import time
-import math
+from typing import Dict, Any
+
 import pygame as pg
 
-import color as color
+from paramater import *
 
-from img import InputBox, SelectBox, SelectText, SelectDicText
+from basic_feature import *
 
 pg.init()
-FONT_pick = pg.font.Font(None, 32)
-FONT_notpick = pg.font.Font(None, 24)
-FONT = pg.font.Font(None, 32)
 
 
-
-class City():
-    def __init__(self, cityname, ctcolor, x, y, w, h, txt_up):
-        # link: list of the city linked
-        self.rect = pg.Rect(x-5, y-4, w, h)
-        self.txt = cityname
-        self.color = ctcolor
-        self.pos = (x,y)
+class City(ImgBox):
+    def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, keep_active=False, to_drag=False,
+                 cityname='', citycolor='', txt_up=True):
+        super().__init__(x=x, y=y, w=w, h=h, color=color, keep_active=keep_active, to_drag=to_drag)
         self.link = []
+        self.txt = cityname
+        self.ctcolor = citycolor
         self.txt_up = txt_up
-        self.img_size = (w,h)
-        
-        # click control
-        self.active = False
-        self.hit = 0
-        self.font_notpick = pg.font.SysFont('Arial',12, bold = True)
-        self.font_pick = pg.font.SysFont('Arial',16, bold = True)
-        self.pick_color = color.SHADOW        
-        
-        # how many disease cube in the city (Max = 3)
-        self.dis = {'r':[], 'b':[], 'k':[], 'y':[]}
-        self.dis_pos = [[0,0], [1,0], [2,0],
-                        [0,1], [1,1], [2,1],
-                        [0,2], [1,2], [2,2]]
-        self.is_explose = False
+        self.txt_no_select_size = 12
+        self.txt_select_size = 16
+
+        self.lab = ''
+
+        self.disease = {'r': [], 'b': [], 'k': [], 'y': []}
 
     def add_link(self, city):
-        self.link.append(city)
-    
-    def infect(self, dis, number):
-        # adding the dis color and number to disease cube
-        # check if num >3, if yes, then return true to explose
-        if len(self.dis[dis]) + number >3:
-            return True
-        else:
-            for j in range(number):
-                self.dis[dis].append(self.dis_pos.pop(0))
-            return False
-    
-    def cure_dis(self, dis, is_vaccine):
-        if is_vaccine:
-            if self.dis[dis]:
-                self.dis_pos.append(self.dis[dis].pop())
-        else:
-            self.dis_pos.append(self.dis[dis].pop())
-            
-    def handle_event(self, event, keep_select = False):
-        if keep_select:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.hit += 1
-                    
-            return self.hit %2
-                    
-        else:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.active = not self.active
+        self.link.append(Link((self.x, self.y), (city.x, city.y)))
 
-                else:
-                    self.active = False
-        
-            return self.active  
-        
-    def display_city_label(self, screen):
-        image = pg.image.load(os.getcwd() + '\\img\\city_' + self.color +'.png')
-        image = pg.transform.scale(image,self.img_size)
-        screen.blit(image, (self.pos[0]-5, self.pos[1]-4))
-        
-        font = self.font_pick if self.active else self.font_notpick
-        city_len = len(self.txt)
-        txt = font.render(string.capwords(self.txt), True, (0, 0, 0))
-        
+    def add_sudo_link(self, pos):
+        self.link.append(Link((self.x, self.y), (pos[0], pos[1])))
+
+    def infect(self, dis_color, dis):
+        self.disease[dis_color].append(dis)
+
+    def treat(self, dis_color):
+        if self.disease[dis_color]:
+            return self.disease[dis_color].pop()
+        else:
+            return ''
+
+    def build_lab(self, lab):
+        lab.update_pos(self.x - lab_size[0] * 0.5, self.y - lab_size[1] * 0.5)
+        self.lab = lab
+
+    def rm_lab(self):
+        lab = self.lab
+        self.lab = ''
+        return lab
+
+    def display_before(self, screen):
+        if self.lab:
+            self.lab.display(screen)
+
+            # draw link
+        for link in self.link:
+            link.display(screen)
+
+    def display_after(self, screen):
+        # draw city name
+        txt_size = self.txt_select_size if self.active else self.txt_no_select_size
+        font = pg.font.SysFont('Calibri', txt_size, True, False)
+        text = font.render(string.capwords(self.txt), True, self.color)
+        text_rect = text.get_rect(midtop=self.rect.midbottom)
         if self.txt_up:
-            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]-18))
-        else:
-            screen.blit(txt, (self.pos[0]-(city_len*2/3), self.pos[1]+21))
-            
-        # draw rect if activate
-        if self.active:
-            pg.draw.rect(screen, self.pick_color, self.rect, 2)
+            text_rect = text.get_rect(midbottom=self.rect.midtop)
 
-    def display_city_dis(self,screen):
-        for dis in self.dis:
-            if self.dis[dis]:
-                image = pg.image.load(os.getcwd() + '\\img\\dis_' + dis +'.png')
-                image = pg.transform.scale(image,(8,8))
-                
-                for pos in self.dis[dis]:
-                    screen.blit(image, (self.pos[0] + pos[0]*9 -3, 
-                                        self.pos[1] + pos[1]*9 ))
+        screen.blit(text, text_rect)
+
+        #
+        diseases = []
+        for vs in self.disease.values():
+            for v in vs:
+                diseases.append(v)
+
+        # update starting pos for dis in self.rect, 3 columns in a row
+        w = self.rect.w // 3
+        h = self.rect.h // 3
+
+        x = self.rect.x
+        for n_col in range(3):
+            y = self.rect.y
+            for disease in diseases[n_col * 3: (n_col + 1) * 3]:
+                disease.update_pos(x, y)
+                disease.display(screen)
+                y += h
+            x += w
+
+
+class Lab():
+    def __init__(self):
+        area = ImgBox(x=0, y=0, w=lab_size[0], h=lab_size[1])
+        area.add_img(filename='\\img\\lab.png', size=lab_size)
+        self.area = area
+
+    def update_pos(self, x, y):
+        self.area.update_pos(x, y)
+
+    def display(self, screen):
+        self.area.display(screen)
 
 
 class InfectionCard():
-    def __init__(self,city_ls, rate):
-        self.cards = city_ls.copy()
-        random.shuffle(self.cards)
-        self.discards = []
-        
-        self.w = 100
-        self.h = 90
-        
-        self.rate = int(rate)
-        
-        # select contol
-        self.color = color.RED
-        
-        # area for draw
-        self.draw_pos = [630,510]
-        self.draw_rect = pg.Rect(630, 510, 100, 90)
-        image = pg.image.load(os.getcwd() + '\\img\\infectcard.png')
-        self.image = pg.transform.scale(image, (self.w,self.h))
-        
-        self.draw_active = False
-        
-        # area for discard
-        self.discard_pos = [790,530]
-        self.discard_rect = pg.Rect(770, 510, 100, 90)
-        self.discard_txt = ''
-        
-        self.discard_active = False
+    def __init__(self, city):
+        area = SelectBox(x=infection_card_img_pos[0] + infection_card_size[0] * 0.2,
+                         y=infection_card_img_pos[1] + infection_card_size[0] * 0.2,
+                         w=infection_card_size[0],
+                         h=infection_card_size[1],
+                         keep_active=False, thick=0)
+        area.update_color((0, 175, 0))
+        self.area = area
 
-    def active_draw(self):
-        self.draw_active = True
-        self.draw_discard = False
-    def active_discard(self):
-        self.draw_active = False
-        self.draw_discard = True    
-    def deactive_draw(self):
-        self.draw_active = False
-    def deactive_disdraw(self):
-        self.draw_discard = False
+        x, y = area.rect.topleft
+        area_text = WordBox(x=x, y=y,
+                            w=infection_card_size[0], h=infection_card_size[1])
+
+        area_text.add_text(text=city.txt, size=16, color=BLACK, as_rect=False)
+
+        self.name = city.txt
+
+        self.area_text = area_text
+
+    def update_pos(self, x, y):
+        self.area.update_pos(x, y)
+        text_x, text_y = self.area.rect.topleft
+        self.area_text.update_pos(text_x, text_y)
 
     def handle_event(self, event):
-        rtn_draw, rtn_discard = '',''
-        if event.type == pg.MOUSEBUTTONDOWN:
-            # If the user clicked on the discard pile.
-            if self.discard_rect.collidepoint(event.pos) and not self.discard_active :
-                # highlight the city
-                rtn_discard = self.discard_txt
-                
-            if self.discard_rect.collidepoint(event.pos) and self.discard_active :
-                # shuffle the discard pile and add to the end of the whole pile
-                random.shuffle(self.discards)
-                self.cards = self.cards + self.discards
-                self.discards = []
-                rtn_discard = ''
+        self.area.handle_event(event)
 
-            if self.draw_rect.collidepoint(event.pos) and self.draw_active :
-                rtn_draw =  self.draw()
-
-        return rtn_draw, rtn_discard
+    def rtn_target(self):
+        if self.area.active:
+            return self.name
+        else:
+            return
 
     def display(self, screen):
-        # need to know when the play's round end > to draw card
-        # need to know when to re-shuffle discard pile > when pick up a epdimac card
-        # when those two event occurd, start checking MOUSEDOWN event, to respond accordingly
-        
-        # display infection rate
-        rate_text = 'Infection rate: ' + str(self.rate)
-        rate_txt_surface = FONT.render(rate_text, True, self.color)
-        screen.blit(rate_txt_surface, (self.draw_pos[0] +30, self.draw_pos[1]-30))
-        
-        # display draw part
-        screen.blit(self.image, self.draw_pos)
-        if self.draw_active:
-            pg.draw.rect(screen, self.color, self.draw_rect, 5)
-        
-        # display discard part
-        if self.discards:
-            pg.draw.rect(screen, (0, 155, 0), self.discard_rect, 0)        
-        
-        city_name = string.capwords(self.discard_txt).split()
-        for i, txt in enumerate(city_name):
-            txt_surface = FONT_notpick.render(txt, True, color.BLACK)
-            screen.blit(txt_surface, (self.discard_pos[0], 
-                                      self.discard_pos[1] + i*20))
-        if self.discard_active:
-            pg.draw.rect(screen, self.color, self.discard_rect, 5)
-            
-    def draw(self):
-        card = self.cards.pop()
-        self.discard_txt = card
-        self.discards.append(card)
-        return card
+        self.area.display(screen, is_rect=True, active_off=True)
+        self.area_text.display(screen)
 
 
 class PlayerCard():
-    def __init__(self, x,y, name, color, describe = ''):
-        self.x = x
-        self.y = y
+    def __init__(self, city):
+        area = SelectBox(x=player_card_img_pos[0] + player_card_size[0] * 0.2,
+                         y=player_card_img_pos[1] + player_card_size[1] * 0.2,
+                         w=player_card_size[0],
+                         h=player_card_size[1],
+                         keep_active=False, thick=0)
+        area.update_color(color_rbky[city.ctcolor])
+        self.area = area
 
+        #
+        area_text = WordBox(w=player_card_size[0], h=player_card_size[1])
+        area_text.add_text(text=string.capwords(city.txt), size=12, color=BLACK, is_cap=True)
+        area_text.rotate_text(-90)
+
+        area_text.rect.midright = area.rect.midright
+
+        self.name = city.txt
+        self.area_text = area_text
+        self.discribe = ''
+        self.type = 'city'
+
+    def update_pos(self, x, y):
+        self.area.update_pos(x, y)
+        text_x, text_y = self.area.rect.midright
+        self.area_text.rect.midright = (text_x, text_y)
+
+    def add_discribe(self, discribe):
+        self.discribe = discribe
+
+    def rtn_active(self):
+        return self.area.active
+
+    def handle_event(self, event):
+        self.area.handle_event(event)
+
+    def rtn_target(self):
+        if self.area.active:
+            return self.name
+        else:
+            return
+
+    def display(self, screen):
+        self.area.display(screen, is_rect=True, active_off=True)
+        self.area_text.display(screen)
+
+
+class SpPlayerCard(PlayerCard):
+    def __init__(self, name):
+        area = SelectBox(x=player_card_img_pos[0] + player_card_size[0] * 0.2,
+                         y=player_card_img_pos[1] + player_card_size[1] * 0.2,
+                         w=player_card_size[0],
+                         h=player_card_size[1],
+                         keep_active=False, thick=0)
+        self.area = area
+
+        #
+        area_text = WordBox(w=player_card_size[0], h=player_card_size[1])
+        area_text.add_text(text=string.capwords(name), size=12, color=BLACK, is_cap=True)
+        area_text.rotate_text(-90)
+
+        area_text.rect.midright = area.rect.midright
+
+        self.area_text = area_text
         self.name = name
-        self.describe = describe
-        self.color = color
-        self.img_size = [40,80]
-        
-        # for dragging
-        self.drag = False
-        self.offset_x = 0
-        self.offset_y = 0
-        
-        # image
-        image = pg.image.load(os.getcwd() + '\\img\\playercard_' + self.color +'.png')
-        self.image = pg.transform.scale(image,self.img_size)        
-        self.image_rect = self.image.get_rect(topleft = (self.x, self.y))
-        
-        # card name
-        font = pg.font.SysFont('Calibri', 15, True, False)
-        text = font.render(self.name, True, (0, 0, 0))
-        self.text = pg.transform.rotate(text, -90) 
-               
-    def update_pos(self,x,y):
-        self.x = x
-        self.y = y
-        self.image_rect.topleft = (x,y)
+        self.discribe = ''
+        self.type = 'special'
 
-    def handle_event(self,event):
-        if event.type == pg.MOUSEBUTTONDOWN:
-            if event.button == 1: 
-                if self.image_rect.collidepoint(event.pos):
-                    self.drag = True
-                    mouse_x, mouse_y = event.pos
-                    self.offset_x = self.image_rect.x - mouse_x
-                    self.offset_y = self.image_rect.y - mouse_y
-
-        elif event.type == pg.MOUSEBUTTONUP:
-            if event.button == 1:
-                self.drag = False
-        
-        elif event.type == pg.MOUSEMOTION:
-            if self.drag:
-                mouse_x, mouse_y = event.pos
-                self.image_rect.x = mouse_x + self.offset_x
-                self.image_rect.y = mouse_y + self.offset_y
-        
-    def display(self,screen):
-        
-        
-        screen.blit(self.image, self.image_rect)
-        
-        text_rect = self.text.get_rect(topright= (self.image_rect.x + self.img_size[0],
-                                                     self.image_rect.y + 8 ))
-        screen.blit(self.text, text_rect)        
+    def update_color(self,color):
+        self.area.update_color(color)
 
 
+class DiseaseSummary():
+    def __init__(self):
+        area_text = WordBox(w=disease_summary_size[0], h=disease_summary_size[1])
+
+        self.area_text = area_text
+        self.num = 0
+
+    def update_pos(self, x, y):
+        self.area_text.update_pos(x, y)
+
+    def add_fill_color(self, color):
+        self.area_text.add_fill_color(color)
+
+    def update_num(self, num):
+        self.num = num
+        self.area_text.add_text(text=str(self.num), size=18, color=BLACK, as_rect=False)
+
+    def display(self, screen):
+        self.area_text.display(screen, is_fill=True)
+
+
+class Tip():
+    def __init__(self):
+        area = SelectBox(thick=0)
+        area.update_color(WHITE)
+        self.area = area
+
+        area_text = InfoBox()
+        self.area_text = area_text
+
+    def update_rect(self, x, y, w, h):
+        # set rect in area and area_text
+        self.area.update_pos(x, y)
+        self.area.update_wh(w, h)
+
+        x, y = self.area.rect.center
+        self.area_text.update_pos(x - w * 0.5, y - h * 0.5)
+        self.area_text.update_wh(w, h)
+
+    def update_text(self, title='', title_size=14, title_color=BLACK,
+                    body='', body_size=10, body_color=BLACK,
+                    line_space=15, indent=50, fit_size=35, n_col=1):
+        if title:
+            self.area_text.add_title(title=title, size=title_size, color=title_color)
+        if body:
+            self.area_text.add_body(body=body, size=body_size, color=body_color,
+                                    line_space=line_space, indent=indent, fit_size=fit_size, n_col=n_col)
+
+    def del_text(self):
+        self.area_text.add_title(title='')
+        self.area_text.add_body(body='')
+
+    def display(self, screen):
+        self.area.display(screen)
+        if self.area_text.is_content:
+            self.area_text.display(screen)
+
+
+class ControlBottom():
+    def __init__(self, text, pos, size):
+        area = SelectBox(thick=0, keep_active=False)
+        area.update_color(WHITE)
+        area.update_pos(x=pos[0], y=pos[1])
+        area.update_wh(w=size[0], h=size[1])
+        self.area = area
+
+        area_text = WordBox(x=pos[0] + size[0] * 0.5,
+                            y=pos[1] + size[1] * 0.5,
+                            w=size[0],
+                            h=size[1])
+        area_text.add_text(text=text, color=BLACK, size=36, is_cap=False)
+        self.area_text = area_text
+
+        # if select by other object
+        self.select = False
+
+    def update_pos(self, x, y):
+        # set rect in area and area_text
+        self.area.update_pos(x, y)
+
+    def set_select(self, select):
+        self.select = select
+
+    def unclick(self):
+        self.area.click = False
+
+    def rtn_click(self):
+        return self.area.rtn_click()
+
+    def display(self, screen):
+        if self.select:
+            self.area.update_color(ORANGE)
+        else:
+            self.area.update_color(WHITE)
+
+        self.area.display_no_active(screen)
+        self.area_text.display(screen)
+
+
+# game control
+class GameControl():
+    def __init__(self):
+        self.id = ''
+        self.paramater = {'rep': 1, 'rep_reset': 1}
+        self.action = {}
+
+    def add_id(self, id):
+        self.id = id
+
+    def add_paramater(self, key, val):
+        self.paramater[key] = val
+
+    def add_action(self,  val):
+        self.action = val
+
+    def update_rep(self, num):
+        self.paramater['rep'] = num
+
+    def rtn_action_active(self):
+        action_active = []
+        if self.action:
+            for key, val in self.action.items():
+                action_active.append(val[0])
+        return action_active
+
+
+# player
 class Player():
     def __init__(self):
-        # drawing para
-        self.img_size = [16,20]
-        self.init_angle = 0
-        self.pos = [0,0]
-        self.playerNO = 0
-        self.color = color.WHITE
-        
-        # drawing player area
-        self.playbox = SelectBox(0,0,250,120)
-        
-        # select para
-        self.pawn_rect = pg.Rect(0, 0, 16, 20)
-        self.area_rect = pg.Rect(0, 0, 250, 120)
-        self.active = False
-        self.hit = 0
+        self.pawn = ImgBox(w=player_pawn_size[0], h=player_pawn_size[1], keep_active=False)
+        self.area = SelectBox(w=player_area_size[0], h=player_area_size[1], thick=0, keep_active=False)
+        self.area_text = WordBox(w=player_area_size[0], h=player_area_size[1])
 
-        self.pick_color = color.SHADOW
-                
+        self.pawn_size = player_pawn_size
+        self.init_angle = 0
+        self.playerNO = 0
+
+        self.select = False
+        self.active = False
+
         # basic para
         self.key = ''
         self.city = ''
         self.hand = []
-        
+
         # might change base on character
         self.action = 4
         self.handlimit = 7
@@ -299,246 +368,161 @@ class Player():
         self.sharelock = True
         self.move_other = False
 
-    def handle_event(self, event, keep_select = True):
-        if keep_select:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.pawn_rect.collidepoint(event.pos) or self.area_rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.hit += 1
-                else:
-                    self.hit = 0
-        else:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.pawn_rect.collidepoint(event.pos) or self.area_rect.collidepoint(event.pos):
-                    # Toggle the active variable.
-                    self.active = not self.active
-                else:
-                    self.active = False
-        
-        return self.hit % 2
-        
     def playerNO_update(self, playerNO):
         self.playerNO = playerNO
-        self.init_angle = 45 - 40*(int(playerNO) -1)
-        
-        self.area_rect = pg.Rect(1090, (5 + (int(playerNO)-1) * 121), 250 , 120)
-        self.playbox.update_pos(1090, (int(playerNO)-1) * 121)
-        self.playbox.update_select_color(color.RED)
-        
-    def city_update(self, city):
+        self.init_angle = 45 - 40 * (int(playerNO) - 1)
+        self.pawn.rotate_img(self.init_angle)
+
+        x = map_size[0] + 10
+        y = 10 + (int(playerNO) - 1) * player_area_size[1]
+        self.area.update_pos(x, y)
+        self.area_text.update_pos(x, y)
+
+    def pos_update(self, city):
+
         self.city = city
-        x,y = city.pos
+        x, y, w, h = city.rect
         # according to player#, adjust the pos
         # (city's w, play's w, city's h, play's h)
-        pos_adjs = [(0,-1.2, 0, -1.1), (0, 0.3, 0, -1.2), (0, 0.9, 0, -1.1),
-                   (1,-0.6, 0, 0), (1, -1, 1, -0.6), (1, -1.2, 1, 0)]
-        pos_adj = pos_adjs[int(self.playerNO)-1]
-        self.pos = [x + city.img_size[0]*pos_adj[0] + self.img_size[0]*pos_adj[1],
-                    y + city.img_size[1]*pos_adj[2] + self.img_size[1]*pos_adj[3]]
-        self.pawn_rect = pg.Rect(self.pos[0], self.pos[1], 16, 20)
+        pos_adjs = [(0, 0, 0, 0), (0, 1, 0, -0.3), (0, 2, 0, 0),
+                    (1, 0.4, 0.5, 0), (1, 0.3, 1, 0.1), (0.5, 0.1, 1, 0.3)]
+        pos_adj = pos_adjs[int(self.playerNO) - 1]
+        update_x = x + city_size[0] * pos_adj[0] + player_pawn_size[0] * pos_adj[1]
+        update_y = y + city_size[1] * pos_adj[2] + player_pawn_size[1] * pos_adj[3]
 
-    def display_player_area(self, screen):
-        # a region to show player's hand
-        self.playbox.draw(screen,0)
-        if self.hit %2:
-            self.playbox.draw(screen,3, is_select = True)
-        
-        # display chara
-        font = pg.font.SysFont('Calibri', 15, True, False)
-        text = font.render(self.key, True, color.BLACK)
-        text = pg.transform.rotate(text, 30)
-        screen.blit(text, [self.area_rect.x +5, self.area_rect.y])
-    
-    def display_player_map(self, screen):
-        # draw player on the map
-        image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab +'.png')
-        image = pg.transform.scale(image, self.img_size)
-        
-        if self.hit % 2:
-            image = pg.transform.rotate(image, self.init_angle + 8*(round(time.time() % 360)))
-        else:
-            image = pg.transform.rotate(image, self.init_angle)
-        
-        #pawn_cent = self.pawn_rect.center
-        #screen.blit(image, pawn_cent)
-        screen.blit(image, self.pos)
+        self.pawn.update_pos(update_x, update_y)
 
+        # self.city = city
+        # self.pawn.update_pos(city.rect.x, city.rect.y)
 
+    def rtn_active(self):
+        return self.active
 
-      
-    def move(self):
-        pass
-    
-    def build(self):
-        pass
-    
-    def research(self):
-        pass
-    
-    def treat(self, cur_city, dis, is_vaccine):
-        pass
-    
-    def share(self):
-        pass
-
-    def draw_hand(self, card):
+    def add_hand(self, card):
         self.hand.append(card)
-        if len(self.hand) > self.handlimit:
-            self.discard()
-    
-    def discard(self):
-        # display msg that hand over the limit, ask which card to discard
-        # display clear and confirm option
-        self.hand.remove(card)
-        pass
 
+    def discard_hand(self, card):
+        # update the card's pos to discard pile
+        card.update_pos(infection_card_img_pos[0] + infection_card_size[0] + 10, infection_card_img_pos[1])
+        # rm from hand
+        self.hand.remove(card)
+
+    def display(self, screen):
+
+        # draw pawn, player area
+        self.active = True if self.pawn.rtn_active() != self.area.rtn_active() else False
+        if self.active:
+            self.pawn.rotate_img(self.init_angle + 8 * (round(time.time() % 360)))
+            self.area.display_active(screen)
+        else:
+            self.pawn.rotate_img(self.init_angle)
+            self.area.display_no_active(screen)
+        self.pawn.display(screen, is_rect=False)
+        self.area_text.display(screen)
+
+        # draw player card
+        # get the rect to calculate pos for each card
+        x = self.area.rect.x + self.area.rect.w - player_card_size[0] * 0.5
+        y = [self.area.rect.y + player_card_size[1] * 0.2,
+             self.area.rect.y]
+        for i in range(self.handlimit):
+            # calculate
+            cur_x = x - (i + 1) * player_card_size[0] * 0.5
+            cur_y = y[1] if i % 2 else y[0]
+
+            if i < len(self.hand):
+                # update the card to that pos
+                self.hand[i].update_pos(x=cur_x, y=cur_y)
+                self.hand[i].display(screen)
+            # else:
+            #    # just print the rect 
+            #    rect = pg.Rect(cur_x,cur_y,player_card_size[0],player_card_size[1])
+            #    pg.draw.rect(screen, WHITE, rect, 2)
 
 
 class Scientist(Player):
     def __init__(self):
         super().__init__()
         self.color_lab = 'grey'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
-        self.color = color.Scientist
-        self.key = 'Scientist'
+        self.pawn.add_img(filename='\\img\\player_' + self.color_lab + '.png', size=self.pawn_size)
+        self.color = color_Scientist
+        self.name = 'Scientist'
         self.discribe = ['> Need only four cards for cure']
-        
-        self.playbox.update_unselect_color(color.Scientist)
-              
+
+        self.area_text.add_text(text=self.name, color=BLACK, size=15, to_center=False)
+        self.area_text.rotate_text(30)
+        self.area.update_color(color_Scientist)
+
         # character ability
         self.cure_need = 4
-        
+
+
 class Researcher(Player):
     def __init__(self):
         super().__init__()
         self.color_lab = 'yellow'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
-        self.color = color.Researcher
-        self.key = 'Researcher'
-        self.discribe = ['> Give a player card from your hand for one action', 
-                            '> Both of you need to be at the same city'] 
-        
-        self.playbox.update_unselect_color(color.Researcher)
-        
+        self.pawn.add_img(filename='\\img\\player_' + self.color_lab + '.png', size=self.pawn_size)
+        self.color = color_Researcher
+        self.name = 'Researcher'
+        self.discribe = ['> Give a player card from your hand for one action',
+                         '> Both of you need to be at the same city']
+
+        self.area_text.add_text(text=self.name, color=BLACK, size=15, to_center=False)
+        self.area_text.rotate_text(30)
+        self.area.update_color(color_Researcher)
+
         # character ability
         self.sharelock = False
-        
+
+
 class Medic(Player):
     def __init__(self):
         super().__init__()
         self.color_lab = 'orange'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
-        self.color = color.Medic
-        self.key = 'Medic'
+        self.pawn.add_img(filename='\\img\\player_' + self.color_lab + '.png', size=self.pawn_size)
+        self.color = color_Medic
+        self.name = 'Medic'
         self.discribe = [' > Remove all the same disease in the city when you treat',
-                       ' > If the cure is found, no need to cost action for treat']        
-        
-        self.playbox.update_unselect_color(color.Medic)
-        
+                         ' > If the cure is found, no need to cost action for treat']
+
+        self.area_text.add_text(text=self.name, color=BLACK, size=15, to_center=False)
+        self.area_text.rotate_text(30)
+        self.area.update_color(color_Medic)
+
         # character ability
         self.supertreat = False
+
 
 class Dispatcher(Player):
     def __init__(self):
         super().__init__()
         self.color_lab = 'purple'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
-        self.color = color.Dispatcher
-        self.key = 'Dispatcher'
-        self.discribe = [" > Move other player in your turn ",
-                        " > Move any player to another player's city for one action"]         
-        
-        self.playbox.update_unselect_color(color.Dispatcher)
-        
+        self.pawn.add_img(filename='\\img\\player_' + self.color_lab + '.png', size=self.pawn_size)
+        self.color = color_Dispatcher
+        self.name = 'Dispatcher'
+        self.discribe = ["> Move other player in your turn ",
+                         "> Move any player to another player's city for one action"]
+
+        self.area_text.add_text(text=self.name, color=BLACK, size=15, to_center=False)
+        self.area_text.rotate_text(30)
+        self.area.update_color(color_Dispatcher)
+
         # character ability
         self.move_other = True
-        
+
+
 class OperationsExpert(Player):
     def __init__(self):
         super().__init__()
         self.color_lab = 'lightgreen'
-        self.image = pg.image.load(os.getcwd() + '\\img\\player_' + self.color_lab + '.png')
-        self.color = color.OperationsExpert
-        self.key = 'Operations Expert'
-        self.discribe = [' > Build a research station in your city with one action']         
-        
-        self.playbox.update_unselect_color(color.OperationsExpert)
-        
+        self.pawn.add_img(filename='\\img\\player_' + self.color_lab + '.png', size=self.pawn_size)
+        self.color = color_OperationsExpert
+        self.name = 'Operations Expert'
+        self.discribe = [' > Build a research station in your city with one action']
+
+        self.area_text.add_text(text=self.name, color=BLACK, size=15, to_center=False)
+        self.area_text.rotate_text(30)
+        self.area.update_color(color_OperationsExpert)
+
         # character ability
         self.building_action = True
-
-
-
-# Tip area
-# to tell user what is the chosen feature's function or what to do next
-
-class Tip():
-    def __init__(self, x=10, y=10, w=10, h=10, color = color.WHITE, interval = 10, textsize = 16):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.rect = pg.Rect(self.x, self.y, self.w, self.h)
-        self.color = color
-        self.interval = interval
-        self.textsize = textsize
-        
-        # what to show
-        self.content = ''
-        self.displaybox = [SelectText(x = self.x, y = self.y , 
-                                             w = self.w, h = self.h,
-                                             text = self.content)]
-        
-    def update_content(self, content, is_title = False, col_num = 1, x_border = 20, y_border = 10):
-        self.content = content
-        self.displaybox = []
-        interval = self.interval
-
-        if len(content) == 1 and not isinstance(content, list):
-            content = [content]
-        # let content fix
-        content_fix = []
-        for con in content:
-            if len(con) > 35:
-                c = con.split()
-                while len(' '.join(c)) > 30:
-                    con_temp = []
-                    while len(' '.join(con_temp)) <30 and c:
-                        con_temp.append(c.pop(0))
-                    if con_temp:
-                        content_fix.append(' '.join(con_temp))
-                if c:
-                    content_fix.append(' '.join(c))
-                    
-            else:
-                content_fix.append(con)
-        
-        n_point = math.ceil(len(content_fix)/col_num)
-        w = self.w // col_num
-        h = interval
-        
-        x = self.x
-        for n_col in range(col_num):
-            y = self.y
-            for txt in content_fix[n_col * n_point : (n_col+1) * n_point]:
-                size = self.textsize + 4 if is_title else self.textsize
-                box = SelectText(x = x, y = y, w = w, h = h,
-                                             text = txt, size=size)
-                box.update_text_pos(x = x + x_border, y = y + y_border)
-                self.displaybox.append(box)
-                y += h
-            x += w                
-        
- 
-        
-    def display(self, screen):
-        # Blit the rect.
-        rect = pg.Rect(self.x, self.y, self.w, self.h)
-        pg.draw.rect(screen, color.WHITE, rect, 0)
-        
-        # Blit the content
-        for text in self.displaybox:
-            text.draw(screen)
-        
