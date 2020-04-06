@@ -59,13 +59,13 @@ USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 # player board
 player_board = PlayerBoard()
 player_board.add_player_color(color_Scientist)  # ---------------------- debuging
-player_board.update_subboard_info(players, players[1])
+
 
 player_subboard1 = subboard(1)
 player_subboard2 = subboard(2)
 
 player_board_summary = PlayerBoardSummary()
-player_board_summary.add_summary('test') #------------------------------
+player_board_summary.add_summary(['test'])  # ------------------------------
 
 player_board_key = ''
 
@@ -78,7 +78,7 @@ game_control = initial_game_control()
 
 # first event = initial_infection1---------------------------debug mode, start at normal infection
 assign_next_step(game_control, 'normal_infection')
-
+cur_player = players[1]
 '''
 for k, v in game_control.items():
     print(k)
@@ -226,7 +226,7 @@ while game_on:
     ### after event
 
     cur_player_card_temp = player_get_card(OK_bottom,
-                                           players[1], player_card, player_card_active, cur_player_card, tips,
+                                           cur_player, player_card, player_card_active, cur_player_card, tips,
                                            game_control, cur_step='player_draw', next_step='normal_infection')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
@@ -270,16 +270,11 @@ while game_on:
     player_tip_update(tips, player_target=active_player,
                       player_card_target=active_player_card, screen=screen)
 
-
     # update player control board ---------------------------------------------------------debug
-    player_board.update_subboard_info(players, players[1])
-    sub1_infos, sub2_infos = player_board.rtn_subboard_info()
-    temp_player_board_key = player_board.rtn_select()
+    player_board_key = player_subboard_update(players, cur_player, player_board_key,
+                                              player_board, player_subboard1, player_subboard2,
+                                              player_board_summary)
 
-    if player_board_key != temp_player_board_key:
-        player_subboard1.add_subtext(temp_player_board_key, sub1_infos)
-        player_subboard2.add_subtext(temp_player_board_key, sub2_infos)
-        player_board_key = temp_player_board_key
 
     clock.tick(FPS)
     pg.display.flip()

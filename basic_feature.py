@@ -283,7 +283,7 @@ class InfoBox(SelectBox):
         self.fit_size = fit_size
         self.n_col = n_col
 
-    def display(self, screen, thick=2, select=False):
+    def display(self, screen, thick=2, select=False, draw_rect=True):
 
         # Blit the title
         if self.title:
@@ -318,9 +318,10 @@ class InfoBox(SelectBox):
             x += w
             x += 2
 
-            # Blit the rect.
-        rect = pg.Rect(self.x, self.y, self.w, self.h)
-        pg.draw.rect(screen, self.color, rect, thick)
+        # Blit the rect.
+        if draw_rect:
+            rect = pg.Rect(self.x, self.y, self.w, self.h)
+            pg.draw.rect(screen, self.color, rect, thick)
 
 
 class Link():

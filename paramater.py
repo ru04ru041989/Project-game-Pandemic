@@ -37,14 +37,14 @@ USE_bottom_size = (50, 40)
 USE_bottom_pos = (1030, 570)
 # ----------------------------------
 # player control board
-player_control_board_size = (570, 160)
+player_control_board_size = (880, 160)
 player_control_board_pos = (5, 630)
 player_control_subtext_size = (120, 30)
 
-player_board_summary_size = (300, 160)
-player_board_summary_pos = (580, 630)
-CONFIRM_bottom_size = (80,40)
-CONFIRM_bottom_pos = (800,750)
+player_board_summary_size = (290, 150)
+player_board_summary_pos = (585, 635)
+CONFIRM_bottom_size = (80, 40)
+CONFIRM_bottom_pos = (800, 745)
 
 ####################################
 # color

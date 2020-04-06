@@ -369,6 +369,7 @@ class subboard():
         self.cur_mult_subboard = set()
         self.cur_uni_subboard = -1
         self.cur_is_mult = False
+        self.has_active = False
 
     def add_bottom(self):
         # clear bottom
@@ -385,10 +386,11 @@ class subboard():
         self.bottom_text = bottom_text
 
     def add_subtext(self, key, infos):
-        self.subboard = [[],[]]
+        self.subboard = [[], []]
         self.cur_mult_subboard = set()
         self.cur_uni_subboard = -1
         self.cur_is_mult = False
+        self.has_active = False
 
         if key in infos:
             self.subboard_title.add_text(text=infos[key][0], size=16, color=BLACK, as_rect=False)
@@ -403,9 +405,9 @@ class subboard():
                     box_text = WordBox(x=self.x, y=self.y + self.h * (i + 1),
                                        w=self.w, h=self.h, keep_active=False)
                 else:
-                    box = SelectBox(x=self.x + self.w, y=self.y + self.h * (i + 1-5),
+                    box = SelectBox(x=self.x + self.w, y=self.y + self.h * (i + 1 - 5),
                                     w=self.w, h=self.h, keep_active=False)
-                    box_text = WordBox(x=self.x + self.w, y=self.y + self.h * (i + 1-5),
+                    box_text = WordBox(x=self.x + self.w, y=self.y + self.h * (i + 1 - 5),
                                        w=self.w, h=self.h, keep_active=False)
 
                 box.update_color(color[i])
@@ -427,6 +429,7 @@ class subboard():
             box.handle_event(event)
             if box.active:
                 cur_active.append(i)
+                self.has_active = True
 
         # check how many active
         if cur_active:
@@ -455,7 +458,8 @@ class subboard():
                     rtn.append(self.subboard[1][i].org_text)
                 return rtn
         else:
-            if self.cur_uni_subboard != -1:
+            # check if get activate
+            if self.has_active:
                 return self.subboard[1][self.cur_uni_subboard].org_text
 
     def display(self, screen, is_select):
@@ -479,7 +483,6 @@ class subboard():
 
             for box in self.subboard[1]:
                 box.display(screen)
-
 
 
 # player control board
@@ -536,7 +539,7 @@ class PlayerBoard():
         else:
             build_ls = ['Yes'] if city.txt in hand_ls else ['Need city card']
 
-        self.subboard1_info['Build Lab'] = ['Build', [BLACK], build_ls, False]
+        self.subboard1_info['Build Lab'] = ['Build', [WHITE], build_ls, False]
 
         # find cure
         if city.lab:
@@ -610,27 +613,13 @@ class PlayerBoard():
             else:
                 box.display(screen, draw_rect=True, is_fill=True)
 
-    def debug(self):
-        # cur_sub1 = [box.org_text for box in self.cur_subboard1]
-        # cur_sub2 = [box.org_text for box in self.cur_subboard2]
-        print(self.cur_subboard1.org_text)
-        print(self.cur_subboard2.org_text)
-        return self.cur_subboard1.org_text, self.cur_subboard2.org_text
-
 
 # player board summary
 class PlayerBoardSummary():
     def __init__(self):
-        # whole board
-        area = SelectBox(thick=0, keep_active=False)
-        area.update_color(WHITE)
-        area.update_pos(x=player_board_summary_pos[0], y=player_board_summary_pos[1])
-        area.update_wh(w=player_board_summary_size[0], h=player_board_summary_size[1])
-        self.area = area
-
         # summary action
-        area_text = WordBox(x=player_board_summary_pos[0] + 20,
-                            y=player_board_summary_pos[1] + 10)
+        area_text = InfoBox(x=player_board_summary_pos[0],
+                            y=player_board_summary_pos[1])
         self.area_text = area_text
 
         # confirm bottom
@@ -649,7 +638,9 @@ class PlayerBoardSummary():
         self.select = False
 
     def add_summary(self, text):
-        self.area_text.add_text(text=text, size=16, color=BLACK, as_rect=False)
+        self.area_text.add_title(' ', size=2, color=BLACK)
+        self.area_text.add_body(text, size=20, color=BLACK,
+                                line_space=20, indent=10, fit_size=50, n_col=1)
 
     def handel_event(self, event):
         self.bottom.handle_event(event)
@@ -660,8 +651,7 @@ class PlayerBoardSummary():
         else:
             self.bottom.update_color(WHITE)
 
-        self.area.display(screen)
-        self.area_text.display(screen)
+        self.area_text.display(screen, draw_rect=False)
         self.bottom.display(screen)
         self.bottom_text.display(screen)
 

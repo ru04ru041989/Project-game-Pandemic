@@ -2,6 +2,7 @@ import sys
 import csv
 import random
 import copy
+import string
 
 from basic_feature import *
 from feature import *
@@ -437,6 +438,51 @@ def control_tip_update(tips, body):
     tips['control'].update_text(body=body, body_size=16,
                                 line_space=0, indent=10, fit_size=100, n_col=1)
 
+
+# update player control board
+def player_subboard_update(players, cur_player, player_board_key,
+                           player_board, player_subboard1, player_subboard2, player_board_summary):
+    player_board.add_player_color(cur_player.color)
+    player_board.update_subboard_info(players, cur_player)
+    sub1_infos, sub2_infos = player_board.rtn_subboard_info()
+    temp_player_board_key = player_board.rtn_select()
+
+    if player_board_key != temp_player_board_key:
+        player_subboard1.add_subtext(temp_player_board_key, sub1_infos)
+        player_subboard2.add_subtext(temp_player_board_key, sub2_infos)
+        player_board_key = temp_player_board_key
+
+    # update summary borad
+
+    action = player_board.rtn_select()
+    board1 = player_subboard1.rtn_select()
+    board2 = player_subboard2.rtn_select()
+
+    if action == 'Move' and board1:
+        summary_body = ['Action: ' + action, 'Person: ' + board1]
+    elif action == 'Build Lab' and board1:
+        summary_body = ['Action: ' + action, 'Executable: ' + string.capwords(board1)]
+    elif action == 'Find Cure' and board2:
+        board2 = board2 if isinstance(board2, list) else [board2]
+        board2 = [string.capwords(txt) for txt in board2]
+        summary_body = ['Action: ' + action]
+        if len(board2) > 3:
+            summary_body.append('Cards: ' + ','.join(board2[:3]))
+            summary_body.append('       ' + ','.join(board2[3:]))
+        else:
+            summary_body.append('Cards: ' + ','.join(board2))
+    elif action == 'Treat disease' and board1:
+        summary_body = ['Action: ' + action, 'Disease Type: ' + string.capwords(board1)]
+    elif action == 'Share info' and board1 and board2:
+        summary_body = ['Action: ' + action, 'Person: ' + board1, 'Card: ' + string.capwords(board2)]
+    else:
+        summary_body = [' ']
+
+    player_board_summary.add_summary(summary_body)
+
+
+
+    return player_board_key
 
 # update indicater
 
