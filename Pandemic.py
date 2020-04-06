@@ -56,6 +56,19 @@ tips = initial_tip()
 OK_bottom = ControlBottom('OK', OK_bottom_pos, OK_bottom_size)
 USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 
+# player board
+player_board = PlayerBoard()
+player_board.add_player_color(color_Scientist)  # ---------------------- debuging
+player_board.update_subboard_info(players, players[1])
+
+player_subboard1 = subboard(1)
+player_subboard2 = subboard(2)
+
+player_board_summary = PlayerBoardSummary()
+player_board_summary.add_summary('test') #------------------------------
+
+player_board_key = ''
+
 #####################
 #####################
 
@@ -65,7 +78,6 @@ game_control = initial_game_control()
 
 # first event = initial_infection1---------------------------debug mode, start at normal infection
 assign_next_step(game_control, 'normal_infection')
-
 
 '''
 for k, v in game_control.items():
@@ -142,9 +154,23 @@ while game_on:
     OK_bottom.display(screen)
     USE_bottom.display(screen)
 
+    # player board
+    player_board.display(screen)
+    player_board_summary.display(screen)
+
+    player_subboard1.display(screen, player_board.rtn_board_active())
+    player_subboard2.display(screen, player_board.rtn_board_active())
+
+    # ---------------------------------------------------------------------------------
     ### event
     for event in pg.event.get():
         if event.type == pg.QUIT:
+            ###################################### print for debugging
+
+            print(player_board.rtn_select())
+            print(player_subboard1.rtn_select())
+            print(player_subboard2.rtn_select())
+
             sys.exit()
 
         active_city = ''
@@ -164,7 +190,6 @@ while game_on:
                 # let the city where this player on also active
                 active_player.city.update_select(True)
 
-
         if infection_discard:
             infection_discard[-1].handle_event(event)
 
@@ -177,11 +202,16 @@ while game_on:
             if card.rtn_active():
                 active_player_card = card
 
+        player_board.handle_event(event)
+        player_board_summary.handel_event(event)
+
+        player_subboard1.handel_event(event, player_board.rtn_board_active())
+        player_subboard2.handel_event(event, player_board.rtn_board_active())
         # ----------------------------------- using ok bottom click as moving marker to next step
         # check if OK got click
         OK_bottom.area.handle_event(event)
 
-        #------------------------------------ using use bottom click to see if want to use special card
+        # ------------------------------------ using use bottom click to see if want to use special card
         # check if active_player_card is special card
         USE_bottom.set_select(False)
         if active_player_card:
@@ -196,15 +226,14 @@ while game_on:
     ### after event
 
     cur_player_card_temp = player_get_card(OK_bottom,
-                                           players[0], player_card, player_card_active, cur_player_card, tips,
+                                           players[1], player_card, player_card_active, cur_player_card, tips,
                                            game_control, cur_step='player_draw', next_step='normal_infection')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
     if cur_player_card:
         cur_player_card.display(screen)
 
-    #----------------------------------------------------------if this player card is an expose card...
-
+    # ----------------------------------------------------------if this player card is an expose card...
 
     cur_infection_card_temp = infect_city(OK_bottom,
                                           cities, disease, infection_card, infection_discard,
@@ -240,6 +269,17 @@ while game_on:
     city_tip_update(tips, target=active_city, screen=screen)
     player_tip_update(tips, player_target=active_player,
                       player_card_target=active_player_card, screen=screen)
+
+
+    # update player control board ---------------------------------------------------------debug
+    player_board.update_subboard_info(players, players[1])
+    sub1_infos, sub2_infos = player_board.rtn_subboard_info()
+    temp_player_board_key = player_board.rtn_select()
+
+    if player_board_key != temp_player_board_key:
+        player_subboard1.add_subtext(temp_player_board_key, sub1_infos)
+        player_subboard2.add_subtext(temp_player_board_key, sub2_infos)
+        player_board_key = temp_player_board_key
 
     clock.tick(FPS)
     pg.display.flip()

@@ -45,6 +45,7 @@ class SelectBox():
         self.click = False
 
         # for active (if mouse click on the object)
+        self.fill_color = WHITE
         self.active_color = RED
         self.keep_active = keep_active
         self.active = False
@@ -55,6 +56,9 @@ class SelectBox():
         self.drag = False
         self.offset_x = 0
         self.offset_y = 0
+
+    def update_method(self, method):
+        self.keep_active = method
 
     def update_wh(self, w, h):
         self.w = w
@@ -68,8 +72,17 @@ class SelectBox():
         self.rect.x = x
         self.rect.y = y
 
+    def add_fill_color(self, color):
+        self.fill_color = color
+
     def update_color(self, color):
         self.color = color
+
+    def update_active_color(self, color):
+        self.active_color = color
+
+    def update_thick(self, thick=2):
+        self.thick = thick
 
     def handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -121,7 +134,7 @@ class SelectBox():
     def rtn_select(self):
         return self.select
 
-    def display(self, screen, select=False, is_rect=False, active_off=False):
+    def display(self, screen, select=False, is_rect=False, active_off=False, is_fill=False):
         pg.draw.rect(screen, self.color, self.rect, self.thick)
 
         if is_rect:
@@ -130,11 +143,11 @@ class SelectBox():
         if (self.active or select) and not active_off:
             pg.draw.rect(screen, self.active_color, self.rect, 2)
 
-    def display_active(self, screen, select=False):
+    def display_active(self, screen, thick=2):
         pg.draw.rect(screen, self.color, self.rect, self.thick)
-        pg.draw.rect(screen, self.active_color, self.rect, 2)
+        pg.draw.rect(screen, self.active_color, self.rect, thick)
 
-    def display_no_active(self, screen, select=False):
+    def display_no_active(self, screen):
         pg.draw.rect(screen, self.color, self.rect, self.thick)
 
 
@@ -183,14 +196,10 @@ class ImgBox(SelectBox):
 class WordBox(SelectBox):
     def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, thick=2, keep_active=True, to_drag=False):
         super().__init__(x=x, y=y, w=w, h=h, color=color, thick=thick, keep_active=keep_active, to_drag=to_drag)
-        self.fill_color = ''
         self.as_rect = True
         self.text = ''
 
-    def add_fill_color(self, color):
-        self.fill_color = color
-
-    def add_text(self, text, size, color, rotate=0, as_rect=True, to_center=True, is_cap=True):
+    def add_text(self, text, size, color, as_rect=True, to_center=True, is_cap=True):
         text = str(text)
         self.name = text
         self.org_text = text
@@ -222,9 +231,12 @@ class WordBox(SelectBox):
             else:
                 self.rect = self.text.get_rect(topleft=(self.x, self.y))
 
-    def display(self, screen, select=False, is_fill=False, is_rect=False):
+    def display(self, screen, select=False, is_fill=False, is_rect=False, draw_rect=False):
         if is_fill:
             pg.draw.rect(screen, self.fill_color, self.rect, 0)
+
+        if draw_rect:
+            pg.draw.rect(screen, self.color, self.rect, self.thick)
 
         if self.as_rect:
             screen.blit(self.text, self.rect)
@@ -244,13 +256,15 @@ class WordBox(SelectBox):
 
         if self.active or select:
             if not is_rect:
-                pg.draw.rect(screen, self.color, rect, self.thick)
+                pg.draw.rect(screen, self.color, self.rect, self.thick)
 
 
 class InfoBox(SelectBox):
     def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, keep_active=True, to_drag=False):
         super().__init__(x=x, y=y, w=w, h=h, color=color, keep_active=keep_active, to_drag=to_drag)
         self.is_content = False
+        self.title = ''
+        self.body = ''
 
     def add_title(self, title, size=32, color=BLACK):
         font = pg.font.SysFont('Calibri', size, True, False)
@@ -272,7 +286,8 @@ class InfoBox(SelectBox):
     def display(self, screen, thick=2, select=False):
 
         # Blit the title
-        screen.blit(self.title, (self.x + 10, self.y + 5))
+        if self.title:
+            screen.blit(self.title, (self.x + 10, self.y + 5))
 
         # Blit the body
 

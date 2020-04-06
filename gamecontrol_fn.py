@@ -147,7 +147,7 @@ def initial_player(cities):
 
     return players
 
-
+#---------------------------------------------- not adding sp card for debugging
 def initial_player_card(cities):
     player_card = []
 
@@ -157,14 +157,14 @@ def initial_player_card(cities):
         card.add_discribe(['1. Discard this card to move to this city',
                            '2. Discard this card to move to any city if you are in this city'])
         player_card.append(card)
-
+    '''
     # special card
     for name, discribe in sp_player_card.items():
         card = SpPlayerCard(name)
         card.add_discribe(discribe)
         card.update_color(GREEN)
         player_card.append(card)
-
+    '''
     player_card_img = ImgBox(x=player_card_img_pos[0], y=player_card_img_pos[1],
                              w=player_card_size[0], h=player_card_size[1], thick=5, color=RED)
     player_card_img.add_img(filename='\\img\\playercard.png', size=player_card_size, to_center=False)
@@ -417,7 +417,7 @@ def player_tip_update(tips, screen, player_target='', player_card_target=''):
             body.append(a)
         tips['player'].update_text(title=title, title_size=24, title_color=title_color,
                                    body=body, body_size=16,
-                                   line_space=15, indent=30, fit_size=45, n_col=1)
+                                   line_space=15, indent=20, fit_size=45, n_col=1)
         tips['player'].display(screen)
         return
 
@@ -428,7 +428,7 @@ def player_tip_update(tips, screen, player_target='', player_card_target=''):
             body.append(a)
         tips['player'].update_text(title=title, title_size=24,
                                    body=body, body_size=16,
-                                   line_space=15, indent=30, fit_size=45, n_col=1)
+                                   line_space=15, indent=20, fit_size=45, n_col=1)
         tips['player'].display(screen)
         return
 
