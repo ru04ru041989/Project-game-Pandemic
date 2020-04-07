@@ -37,14 +37,14 @@ USE_bottom_size = (50, 40)
 USE_bottom_pos = (1030, 570)
 # ----------------------------------
 # player control board
-player_control_board_size = (880, 160)
+player_control_board_size = (980, 160)
 player_control_board_pos = (5, 630)
 player_control_subtext_size = (120, 30)
 
-player_board_summary_size = (290, 150)
+player_board_summary_size = (390, 150)
 player_board_summary_pos = (585, 635)
 CONFIRM_bottom_size = (80, 40)
-CONFIRM_bottom_pos = (800, 745)
+CONFIRM_bottom_pos = (900, 745)
 
 ####################################
 # color
@@ -110,6 +110,13 @@ infect_action = {
     'is_infect_city': [False, False]
 }
 
+# cur_next phase for different infection stage
+cur_next_ls = [['initial_infection1', 'initial_infection2', 'Press OK to set up 1st initial infection'],
+               ['initial_infection2', 'initial_infection3', 'Press OK to set up 2nd initial infection'],
+               ['initial_infection3', 'player_draw', 'Press OK to set up 3rd initial infection'],
+               ['normal_infection', 'player_draw', 'Press OK to draw infection card']]
+
+
 # ------------------------------------------------------------debug, start from player_draw
 player_draw = {
     'rep': player_card_per_round,
@@ -119,6 +126,13 @@ player_draw = {
         'is_player_get_card': [False, False]
     }
 }
+
+player_round = {
+    'action': {
+        'is_player_round_phase': [False, False]
+    }
+}
+
 
 '''
 some though of control the overall step

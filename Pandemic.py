@@ -44,9 +44,9 @@ cur_lab_num = len(labs)
 players = initial_player(cities)
 
 # player card
-player_card, player_card_img, player_card_discard = initial_player_card(cities)
+player_card, player_card_img, player_card_discard_img = initial_player_card(cities)
 player_card_active = []
-player_discard = []
+player_card_discard = []
 cur_player_card = ''
 
 # tips
@@ -58,7 +58,6 @@ USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 
 # player board
 player_board = PlayerBoard()
-player_board.add_player_color(color_Scientist)  # ---------------------- debuging
 
 player_subboard1 = subboard(1)
 player_subboard2 = subboard(2)
@@ -109,7 +108,10 @@ while game_on:
     # player card
     player_card_img.update_select(game_control['player_draw'].rtn_action_active()[0])
     player_card_img.display(screen)
-    player_card_discard.display(screen)
+    player_card_discard_img.display(screen)
+
+    if player_card_discard:
+        player_card_discard[-1].display(screen)
 
     # indicater
     # update indicater
@@ -154,11 +156,10 @@ while game_on:
     USE_bottom.display(screen)
 
     # player board
-    player_board.display(screen)
-    player_board_summary.display(screen)
-
-    player_subboard1.display(screen)
-    player_subboard2.display(screen)
+    ## might have different board to display
+    player_round_display(screen, game_control['player_round'].rtn_action_active()[0],
+                         player_board, player_board_summary,
+                         player_subboard1, player_subboard2)
 
     # ---------------------------------------------------------------------------------
     ### event
@@ -198,11 +199,10 @@ while game_on:
             if card.rtn_active():
                 active_player_card = card
 
-        player_board.handle_event(event)
-        player_board_summary.handel_event(event)
-
-        player_subboard1.handel_event(event)
-        player_subboard2.handel_event(event)
+        # associated with board (which board display, which board collect event)
+        player_round_handel_event(event, game_control['player_round'].rtn_action_active()[0],
+                                  player_board, player_board_summary,
+                                  player_subboard1, player_subboard2)
 
         # ----------------------------------- using ok bottom click as moving marker to next step
         # check if OK got click
@@ -222,9 +222,44 @@ while game_on:
 
     ### after event
 
+    ##----------------------------------------------------------------------------------------------
+    ## player's action .......... this process only executive in player_round
+
+    # update player control board ---------------------------------------------------------debug
+    player_board_key = player_subboard_update(player_board, player_subboard1, player_subboard2,
+                                              player_board_summary,
+                                              players, cur_player, player_board_key, active_city)
+
+    if player_board_summary.rtn_active():
+        # player click on confirm
+        action, target = player_action_confirm(players, cur_player,
+                                               player_board, player_subboard1, player_subboard2, player_board_summary)
+
+        if action == 'Move':
+            move(cur_player, target[0], target[1], target[2],
+                 player_card_active, player_card_discard)
+
+        if action == 'Share':
+            share(cur_player, target[0], target[1])
+
+        if action == 'Cure':
+            discover_cure(cur_player, target, is_cure, find_cure, player_card_active, player_card_discard)
+
+        if action == 'Build':
+            build(cur_player, target, labs, player_card_active, player_card_discard)
+
+        if action == 'Treat':
+            treat(cur_player, target, disease, is_cure, disease_cube_summary)
+
+        player_subboard_update(player_board, player_subboard1, player_subboard2,
+                               player_board_summary,
+                               players, cur_player, player_board_key, active_city, force_update=True)
+
+    ##-------------------------------------------------------------------------------------------------------
+    ## player get card
     cur_player_card_temp = player_get_card(OK_bottom,
                                            cur_player, player_card, player_card_active, cur_player_card, tips,
-                                           game_control, cur_step='player_draw', next_step='normal_infection')
+                                           game_control, cur_step='player_draw', next_step='player_round')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
     if cur_player_card:
@@ -232,6 +267,8 @@ while game_on:
 
     # ----------------------------------------------------------if this player card is an expose card...
 
+    ##------------------------------------------------------------------------------------------------------
+    ## infection phase
     cur_infection_card_temp = infect_city(OK_bottom,
                                           cities, disease, infection_card, infection_discard,
                                           cur_infection_card,
@@ -243,7 +280,9 @@ while game_on:
     if cur_infection_card:
         cur_infection_card.display(screen)
 
-        # ---------------------------------------------------------------------------------
+    ##--------------------------------------------------------------------------------------------  start a new round
+
+    #### info update
 
     # if click on infection card or play card
     rtn_infection_card = ''
@@ -266,31 +305,6 @@ while game_on:
     city_tip_update(tips, target=active_city, screen=screen)
     player_tip_update(tips, player_target=active_player,
                       player_card_target=active_player_card, screen=screen)
-
-    ########### player's round
-    # update player control board ---------------------------------------------------------debug
-    player_board_key = player_subboard_update(players, cur_player, player_board_key,
-                                              player_board, player_subboard1, player_subboard2,
-                                              player_board_summary)
-
-    if player_board_summary.rtn_active():
-        # player click on confirm
-        action, target = player_action_confirm(players, cur_player,
-                                               player_board, player_subboard1, player_subboard2, player_board_summary)
-
-        if action == 'Share':
-            share(cur_player, target[0], target[1])
-            # after share, forcing player subboard update
-            player_subboard_update(players, cur_player, ' ',
-                                   player_board, player_subboard1, player_subboard2,
-                                   player_board_summary)
-
-        if action == 'Cure':
-            discover_cure(cur_player, target, is_cure, find_cure)
-            player_subboard_update(players, cur_player, ' ',
-                                   player_board, player_subboard1, player_subboard2,
-                                   player_board_summary)
-
 
     clock.tick(FPS)
     pg.display.flip()

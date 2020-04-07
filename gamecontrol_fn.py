@@ -40,12 +40,23 @@ def initial_city(city_size):
                     cities[row[0]].add_link(cities[row[1]])
                 else:
                     cities[row[0]].add_sudo_link(sudo_city[row[1]])
+
+    # adding city link for those link with sudo_city
+    cities['san francisco'].city_link.append(cities['tokyo'])
+    cities['tokyo'].city_link.append(cities['san francisco'])
+    cities['san francisco'].city_link.append(cities['manila'])
+    cities['manila'].city_link.append(cities['san francisco'])
+    cities['los angles'].city_link.append(cities['sydney'])
+    cities['sydney'].city_link.append(cities['los angles'])
+
     return cities, cities_ls
 
 
 def initial_lab():
-    lab = Lab()
-    labs = [lab for i in range(lab_num)]
+    labs = []
+    for i in range(lab_num):
+        lab = Lab()
+        labs.append(lab)
 
     return labs
 
@@ -129,7 +140,7 @@ def initial_indicater(infect_rate, expose_time, labs):
     return lab_indicater, infection_rate_text, expose_time_text
 
 
-def initial_player(cities):
+def initial_player(cities):  # -----------------------------------------debug  start at taipei
     sci = Scientist()
     res = Researcher()
     med = Medic()
@@ -143,7 +154,7 @@ def initial_player(cities):
 
     for i, player in enumerate(players):
         player.playerNO_update(i + 1)
-        player.pos_update(cities['atlanta'])
+        player.pos_update(cities['taipei'])
 
     return players
 
@@ -189,6 +200,7 @@ def initial_tip():
     return tips
 
 
+# ----------------------------------------------####   add game control here
 def initial_game_control():
     game_control = {}
     # infection control
@@ -199,7 +211,6 @@ def initial_game_control():
         control.add_paramater('rep', copy.deepcopy(val[1]))
         control.add_paramater('rep_reset', copy.deepcopy(val[1]))
         control.add_action(copy.deepcopy(infect_action))
-
         game_control[key] = control
 
     # player_draw
@@ -208,8 +219,13 @@ def initial_game_control():
     control.add_paramater('rep', player_draw['rep'])
     control.add_paramater('rep_reset', player_card_per_round)
     control.add_action(player_draw['action'])
-
     game_control['player_draw'] = control
+
+    # player_round
+    control = GameControl()
+    control.add_id('player_round')
+    control.add_action(player_round['action'])
+    game_control['player_round'] = control
 
     return game_control
 
@@ -221,6 +237,10 @@ def initial_game_control():
 def assign_next_step(game_control, step_name):
     key = list(game_control[step_name].action)[0]
     game_control[step_name].action[key][0] = True
+
+
+def player_action_round():
+    pass
 
 
 def player_get_card(OK_bottom,
@@ -335,8 +355,8 @@ def helper_infect_city(OK_bottom,
             cities[city_name].update_active(True)
 
         # update dis_cube_num
-        cur_num = disease_cube_summary[cities[city_name].ctcolor].num
-        disease_cube_summary[cities[city_name].ctcolor].update_num(cur_num - control.paramater['dis_num'])
+     #   cur_num = disease_cube_summary[cities[city_name].ctcolor].num
+        disease_cube_summary[cities[city_name].ctcolor].add_num(-1*control.paramater['dis_num'])
 
         # disable OK bottom
         OK_bottom.set_select(False)
@@ -358,10 +378,7 @@ def infect_city(OK_bottom,
                 cities, disease, infection_card, infection_discard, cur_infection_card,
                 disease_cube_summary, tips,
                 game_control):
-    cur_next_ls = [['initial_infection1', 'initial_infection2', 'Press OK to set up 1st initial infection'],
-                   ['initial_infection2', 'initial_infection3', 'Press OK to set up 2nd initial infection'],
-                   ['initial_infection3', 'player_draw', 'Press OK to set up 3rd initial infection'],
-                   ['normal_infection', 'player_draw', 'Press OK to draw infection card']]
+    # cur_next_ls is in paramater for better control
 
     for cur_step, next_step, tip_text in cur_next_ls:
         cur_infection_card_temp = helper_infect_city(OK_bottom,
@@ -387,12 +404,26 @@ def player_action_confirm(players, cur_player,
     player_board_summary.set_active(False)
 
     if action == 'Move':  # return which player to move
-        if not cur_player.move_other:
-            return ['Move', cur_player]
-        elif board1:
-            for player in players:
-                if player.name == board1:
-                    return ['Move', player]
+        target_city = player_board.city_pick
+        if target_city:
+            # figure which player to move
+            if not cur_player.move_other:
+                ppl = cur_player
+            else:
+                if board1:
+                    for player in players:
+                        if player.name == board1:
+                            ppl = player
+            # figure if need card, and which player choose if there is multi card can be used
+            if target_city in cur_player.city.city_link:
+                return ['Move', [ppl, target_city, '']]
+            elif target_city.lab and cur_player.city.lab:
+                return ['Move', [ppl, target_city, '']]
+            else:
+                if board2:
+                    for card in cur_player.hand:
+                        if card.name == board2:
+                            return ['Move', [ppl, target_city, card]]
 
         summary_text = ['Please choose player to move']
 
@@ -449,26 +480,40 @@ def player_action_confirm(players, cur_player,
             return ['Share', rtn]
 
     player_board_summary.add_summary(summary_text)
+
+    # after comfirm, reset player_board
+    player_board.update_city_pick('')
+
+
     return '', ''
+
+
+# helper function
+def using_card(player, card, player_card_active, player_card_discard):
+    player.hand.remove(card)
+    player_card_active.remove(card)
+    player_card_discard.append(card)
+    card.update_pos(x=player_card_img_pos[0] + player_card_size[0] + 15,
+                    y=player_card_img_pos[1])
 
 
 # player's action
 
-def move():
-    pass
+def move(cur_player, player_to_move, city_move_to, card_to_use,
+         player_card_active, player_card_discard):
+    player_to_move.pos_update(city_move_to)
+    if card_to_use:
+        using_card(cur_player, card_to_use, player_card_active, player_card_discard)
+    cur_player.action_used += 1
 
-
-def build(cur_player, card, labs):
+def build(cur_player, card_to_use, labs, player_card_active, player_card_discard):
     if not cur_player.city.lab:
         cur_player.city.build_lab(labs.pop())
         if not cur_player.building_action:
-            cur_player.hand.remove(card)
-            card.update_pos(x=player_card_img_pos[0] + player_card_size[0] + 10,
-                            y=player_card_img_pos[1] - 5)
-        cur_player.action_used += 1
+            using_card(cur_player, card_to_use, player_card_active, player_card_discard)
+    cur_player.action_used += 1
 
-
-def discover_cure(cur_player, cards, is_cure, find_cure):
+def discover_cure(cur_player, cards, is_cure, find_cure, player_card_active, player_card_discard):
     for k, v in color_rbky.items():
         if v == cards[0].color:
             dis_type = k
@@ -476,23 +521,21 @@ def discover_cure(cur_player, cards, is_cure, find_cure):
     find_cure[dis_type].add_text(text='Found', size=12, color=WHITE, as_rect=False)
 
     for card in cards:
-        cur_player.hand.remove(card)
-        card.update_pos(x=player_card_img_pos[0] + player_card_size[0] + 10,
-                        y=player_card_img_pos[1] - 5)
+        using_card(cur_player, card, player_card_active, player_card_discard)
     cur_player.action_used += 1
 
-
-def treat(cur_player, disease_color, disease, is_cure):
+def treat(cur_player, disease_color, disease, is_cure, disease_cube_summary):
     dis = cur_player.city.treat(disease_color)
     if dis:
         disease[disease_color].append(dis)
+        disease_cube_summary[disease_color].add_num(1)
 
     if is_cure[disease_color]:
         for i in range(3):
             dis = cur_player.city.treat(disease_color)
             if dis:
                 disease[disease_color].append(dis)
-
+    cur_player.action_used += 1
 
 def share(cur_player, target_player, card):
     cur_player.hand.remove(card)
@@ -554,14 +597,20 @@ def control_tip_update(tips, body):
 
 
 # update player control board
-def player_subboard_update(players, cur_player, player_board_key,
-                           player_board, player_subboard1, player_subboard2, player_board_summary):
+def player_subboard_update(player_board, player_subboard1, player_subboard2,
+                           player_board_summary,
+                           players, cur_player, player_board_key,
+                           active_city, force_update=False):
     player_board.add_player_color(cur_player.color)
-    player_board.update_subboard_info(players, cur_player)
+    player_board.update_subboard_info(players, cur_player, active_city)
     sub1_infos, sub2_infos = player_board.rtn_subboard_info()
     temp_player_board_key = player_board.rtn_select()
 
-    if player_board_key != temp_player_board_key:
+    #action = player_board.rtn_select()
+    if active_city:
+        force_update = True
+
+    if player_board_key != temp_player_board_key or force_update:
         player_subboard1.add_subtext(temp_player_board_key, sub1_infos)
         player_subboard2.add_subtext(temp_player_board_key, sub2_infos)
         player_board_key = temp_player_board_key
@@ -572,10 +621,52 @@ def player_subboard_update(players, cur_player, player_board_key,
     board1 = player_subboard1.rtn_select()
     board2 = player_subboard2.rtn_select()
 
-    if action == 'Move' and board1:
-        summary_body = ['Action: ' + action, 'Person: ' + board1]
-    elif action == 'Build Lab' and board1:
-        summary_body = ['Action: ' + action, 'Executable: ' + string.capwords(board1)]
+    if action == 'Move':
+        ppl = board1 if board1 else cur_player.name
+        # check if the place to move is executable
+        result = 'NA'
+        if player_board.city_pick:
+            if player_board.city_pick == cur_player.city:
+                place = 'In this city already'
+            else:
+                place = string.capwords(player_board.city_pick.txt)
+                if player_board.city_pick in cur_player.city.city_link:
+                    result = 'Regular move'
+                elif player_board.city_pick.lab and cur_player.city.lab:
+                    result = 'Move through lab'
+
+                else:
+                    having_cur_city_card = cur_player.city.txt in [card.name for card in cur_player.hand]
+                    having_act_city_card = player_board.city_pick.txt in [card.name for card in cur_player.hand]
+
+                    if having_cur_city_card and having_act_city_card:
+                        player_board.update_city_pick(player_board.city_pick)
+                        result = 'Discard ' + string.capwords(player_board.city_pick.txt) + \
+                                 ' or ' + string.capwords(cur_player.city.txt) + ' to move'
+                    elif having_cur_city_card:
+                        result = 'Discard ' + string.capwords(cur_player.city.txt) + ' to move'
+                    elif having_act_city_card:
+                        result = 'Discard ' + string.capwords(player_board.city_pick.txt) + ' to move'
+                    else:
+                        result = 'Cannot move to this city'
+        else:
+            place = 'Please choose a city'
+
+        summary_body = ['Action: ' + action, 'Person: ' + ppl,
+                        'To City: ' + place, 'Result: ' + result]
+
+    elif action == 'Build Lab':
+        if cur_player.building_action:
+            result = 'No card needs'
+        else:
+            if cur_player.city.txt in [card.name for card in cur_player.hand if card.type == 'city']:
+                result = 'Discard ' + string.capwords(cur_player.city.txt) + ' to build a lab'
+            else:
+                result = 'NA'
+
+        summary_body = ['Action: ' + action,
+                        'Executable: ' + result]
+
     elif action == 'Find Cure' and board2:
         board2 = board2 if isinstance(board2, list) else [board2]
         board2 = [string.capwords(txt) for txt in board2]
@@ -585,10 +676,13 @@ def player_subboard_update(players, cur_player, player_board_key,
             summary_body.append('       ' + ','.join(board2[3:]))
         else:
             summary_body.append('Cards: ' + ','.join(board2))
+
     elif action == 'Treat disease' and board1:
         summary_body = ['Action: ' + action, 'Disease Type: ' + string.capwords(board1)]
+
     elif action == 'Share info' and board1 and board2:
         summary_body = ['Action: ' + action, 'Person: ' + board1, 'Card: ' + string.capwords(board2)]
+
     else:
         summary_body = [' ']
 
@@ -608,3 +702,29 @@ def hightlight_city(cities, rtn_infection_card, rtn_player_card, cur_infection_c
         if cities[city].txt == rtn_infection_card or cities[city].txt == rtn_player_card or \
                 cities[city].txt == cur_infection_city:
             cities[city].update_active(True)
+
+
+#########
+# manage set of display / handel event
+#########
+
+def player_round_display(screen, is_player_round,
+                         player_board, player_board_summary,
+                         player_subboard1, player_subboard2):
+    if is_player_round:
+        player_board.display(screen)
+        player_board_summary.display(screen)
+
+        player_subboard1.display(screen)
+        player_subboard2.display(screen)
+
+
+def player_round_handel_event(event, is_player_round,
+                              player_board, player_board_summary,
+                              player_subboard1, player_subboard2):
+    if is_player_round:
+        player_board.handle_event(event)
+        player_board_summary.handel_event(event)
+
+        player_subboard1.handel_event(event)
+        player_subboard2.handel_event(event)

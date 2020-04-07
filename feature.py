@@ -16,6 +16,7 @@ class City(ImgBox):
     def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, keep_active=False, to_drag=False,
                  cityname='', citycolor='', txt_up=True):
         super().__init__(x=x, y=y, w=w, h=h, color=color, keep_active=keep_active, to_drag=to_drag)
+        self.city_link = []
         self.link = []
         self.txt = cityname
         self.ctcolor = citycolor
@@ -29,6 +30,7 @@ class City(ImgBox):
 
     def add_link(self, city):
         self.link.append(Link((self.x, self.y), (city.x, city.y)))
+        self.city_link.append(city)
 
     def add_sudo_link(self, pos):
         self.link.append(Link((self.x, self.y), (pos[0], pos[1])))
@@ -166,6 +168,7 @@ class PlayerCard():
         self.discribe = ''
         self.type = 'city'
 
+
     def update_pos(self, x, y):
         self.area.update_pos(x, y)
         text_x, text_y = self.area.rect.midright
@@ -230,6 +233,10 @@ class DiseaseSummary():
 
     def add_fill_color(self, color):
         self.area_text.add_fill_color(color)
+
+    def add_num(self, num):
+        self.num += num
+        self.area_text.add_text(text=str(self.num), size=18, color=BLACK, as_rect=False)
 
     def update_num(self, num):
         self.num = num
@@ -479,7 +486,12 @@ class PlayerBoard():
 
         self.cur_subtext_area = ''
 
-    def update_subboard_info(self, players, cur_player):
+        self.city_pick = ''
+
+    def update_city_pick(self, city):
+        self.city_pick = city
+
+    def update_subboard_info(self, players, cur_player, active_city):
         # info for update
         city = cur_player.city
         hand = cur_player.hand
@@ -495,10 +507,26 @@ class PlayerBoard():
             move_ls = [cur_player.name]
             move_color = [cur_player.color]
 
+        card_to_use, card_to_use_color = [], []
+        if cur_player.city.txt in hand_ls:
+            card_to_use.append(cur_player.city.txt)
+            card_to_use_color.append(color_rbky[cur_player.city.ctcolor])
+
+        if active_city:
+            self.city_pick = active_city
+            if active_city.txt in hand_ls and active_city.txt not in card_to_use:
+                card_to_use.append(active_city.txt)
+                card_to_use_color.append(color_rbky[active_city.ctcolor])
+        elif self.city_pick:
+            if self.city_pick.txt in hand_ls and self.city_pick.txt not in card_to_use:
+                card_to_use.append(self.city_pick.txt)
+                card_to_use_color.append(color_rbky[self.city_pick.ctcolor])
+
         self.subboard1_info['Move'] = ['Whom', move_color, move_ls, False]
+        self.subboard2_info['Move'] = ['Using Card', card_to_use_color, card_to_use, False]
 
         # build lab
-        if not cur_player.building_action:
+        if cur_player.building_action:
             build_ls = ['Yes']
         else:
             build_ls = ['Yes'] if city.txt in hand_ls else ['Need city card']
@@ -514,7 +542,7 @@ class PlayerBoard():
             cure_card_color = [card.color for card in hand if card.color in cure_color]
         else:
             cure_ls = ['City has no lab']
-            cure_color = [BLACK]
+            cure_color = [WHITE]
             cure_card, cure_card_color = [], []
 
         self.subboard1_info['Find Cure'] = ['Which cure', cure_color, cure_ls, False]
@@ -603,7 +631,7 @@ class PlayerBoardSummary():
 
         # player action left
         action_used = WordBox(x=player_board_summary_pos[0] + player_control_subtext_size[0] * 0.8,
-                              y=CONFIRM_bottom_pos[1])
+                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1]*0.5)
         action_used.add_text(text=' ', size=18, color=BLACK, as_rect=False, to_center=False)
         self.action_used = action_used
 
@@ -661,7 +689,7 @@ class Player():
         self.action = 4
         self.handlimit = 7
         self.cure_need = 5
-        self.building_action = True
+        self.building_action = False
         self.supertreat = False
         self.sharelock = True
         self.move_other = False
