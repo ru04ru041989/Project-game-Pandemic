@@ -360,9 +360,6 @@ class subboard():
         self.subboard_title = WordBox(x=self.x, y=self.y, w=self.w, h=self.h)
         self.subboard_title.add_text(' ', size=16, color=BLACK, as_rect=False)
 
-        self.bottom = ''
-        self.bottom_text = ''
-
         self.title = ''
 
         # maybe need to tracking system
@@ -370,20 +367,6 @@ class subboard():
         self.cur_uni_subboard = -1
         self.cur_is_mult = False
         self.has_active = False
-
-    def add_bottom(self):
-        # clear bottom
-        bottom = SelectBox(thick=0, keep_active=False)
-        bottom.update_color(WHITE)
-        bottom.update_pos(x=self.x + player_control_subtext_size[0] * 1.5, y=self.y)
-        bottom.update_wh(w=self.w * 0.5, h=self.h)
-        self.bottom = bottom
-
-        bottom_text = WordBox(x=self.x + player_control_subtext_size[0] * 1.5 + self.w * 0.5 * 0.5,
-                              y=self.y + self.h * 0.5,
-                              w=self.w * 0.5, h=self.h)
-        bottom_text.add_text(text='Clear', color=BLACK, size=16, is_cap=False)
-        self.bottom_text = bottom_text
 
     def add_subtext(self, key, infos):
         self.subboard = [[], []]
@@ -417,13 +400,7 @@ class subboard():
                 self.subboard[0].append(box)
                 self.subboard[1].append(box_text)
 
-    def handel_event(self, event, is_select=False):
-        if not is_select:
-            self.cur_uni_subboard = -1
-            self.cur_mult_subboard = set()
-            for box in self.subboard[0]:
-                box.hit = 0
-
+    def handel_event(self, event):
         cur_active = []
         for i, box in enumerate(self.subboard[0]):
             box.handle_event(event)
@@ -442,14 +419,6 @@ class subboard():
                 for act in cur_active:
                     self.cur_mult_subboard.add(act)
 
-        if self.bottom:
-            self.bottom.handle_event(event)
-
-            if self.bottom.active:
-                for box in self.subtext:
-                    box.update_active(False)
-                    box.hit = 0
-
     def rtn_select(self):
         if self.cur_is_mult:
             rtn = []
@@ -462,27 +431,22 @@ class subboard():
             if self.has_active:
                 return self.subboard[1][self.cur_uni_subboard].org_text
 
-    def display(self, screen, is_select):
-        if is_select:
-            if self.title:
-                self.subboard_title.display(screen)
+    def display(self, screen):
+        if self.title:
+            self.subboard_title.display(screen)
 
-            if self.bottom:
-                self.bottom.display(screen)
-                self.bottom_text.display(screen)
+        for i, box in enumerate(self.subboard[0]):
+            box.update_thick()
+            if self.cur_is_mult:
+                if box.active:
+                    box.update_thick(0)
+            else:
+                if box.active or i == self.cur_uni_subboard:
+                    box.update_thick(0)
+            box.display_no_active(screen)
 
-            for i, box in enumerate(self.subboard[0]):
-                box.update_thick()
-                if self.cur_is_mult:
-                    if box.active:
-                        box.update_thick(0)
-                else:
-                    if box.active or i == self.cur_uni_subboard:
-                        box.update_thick(0)
-                box.display_no_active(screen)
-
-            for box in self.subboard[1]:
-                box.display(screen)
+        for box in self.subboard[1]:
+            box.display(screen)
 
 
 # player control board
@@ -596,8 +560,8 @@ class PlayerBoard():
 
     def handle_event(self, event):
         self.area.handle_event(event)
-        if not self.area.active:
-            self.cur_subtext_area = ''
+#        if not self.area.active:
+#            self.cur_subtext_area = ''
 
         for i, box in enumerate(self.subtext_area):
             box.handle_event(event)
@@ -657,6 +621,9 @@ class PlayerBoardSummary():
 
     def rtn_active(self):
         return self.bottom.active
+
+    def set_active(self, active):
+        self.bottom.active = active
 
     def display(self, screen):
         if self.select:
@@ -765,10 +732,7 @@ class Player():
                 # update the card to that pos
                 self.hand[i].update_pos(x=cur_x, y=cur_y)
                 self.hand[i].display(screen)
-            # else:
-            #    # just print the rect 
-            #    rect = pg.Rect(cur_x,cur_y,player_card_size[0],player_card_size[1])
-            #    pg.draw.rect(screen, WHITE, rect, 2)
+
 
 
 class Scientist(Player):

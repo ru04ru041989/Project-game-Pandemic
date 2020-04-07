@@ -157,8 +157,8 @@ while game_on:
     player_board.display(screen)
     player_board_summary.display(screen)
 
-    player_subboard1.display(screen, player_board.rtn_board_active())
-    player_subboard2.display(screen, player_board.rtn_board_active())
+    player_subboard1.display(screen)
+    player_subboard2.display(screen)
 
     # ---------------------------------------------------------------------------------
     ### event
@@ -201,8 +201,9 @@ while game_on:
         player_board.handle_event(event)
         player_board_summary.handel_event(event)
 
-        player_subboard1.handel_event(event, player_board.rtn_board_active())
-        player_subboard2.handel_event(event, player_board.rtn_board_active())
+        player_subboard1.handel_event(event)
+        player_subboard2.handel_event(event)
+
         # ----------------------------------- using ok bottom click as moving marker to next step
         # check if OK got click
         OK_bottom.area.handle_event(event)
@@ -276,6 +277,20 @@ while game_on:
         # player click on confirm
         action, target = player_action_confirm(players, cur_player,
                                                player_board, player_subboard1, player_subboard2, player_board_summary)
+
+        if action == 'Share':
+            share(cur_player, target[0], target[1])
+            # after share, forcing player subboard update
+            player_subboard_update(players, cur_player, ' ',
+                                   player_board, player_subboard1, player_subboard2,
+                                   player_board_summary)
+
+        if action == 'Cure':
+            discover_cure(cur_player, target, is_cure, find_cure)
+            player_subboard_update(players, cur_player, ' ',
+                                   player_board, player_subboard1, player_subboard2,
+                                   player_board_summary)
+
 
     clock.tick(FPS)
     pg.display.flip()
