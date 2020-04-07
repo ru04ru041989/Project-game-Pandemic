@@ -630,20 +630,33 @@ class PlayerBoardSummary():
         self.bottom = bottom
 
         bottom_text = WordBox(x=CONFIRM_bottom_pos[0] + CONFIRM_bottom_size[0] * 0.5,
-                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.5,
+                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.6,
                               w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
         bottom_text.add_text(text='Confirm', color=BLACK, size=20, is_cap=False)
         self.bottom_text = bottom_text
 
         self.select = False
 
+        # player action left
+        action_used = WordBox(x=player_board_summary_pos[0] + player_control_subtext_size[0] * 0.8,
+                              y=CONFIRM_bottom_pos[1])
+        action_used.add_text(text=' ', size=18, color=BLACK, as_rect=False, to_center=False)
+        self.action_used = action_used
+
     def add_summary(self, text):
         self.area_text.add_title(' ', size=2, color=BLACK)
         self.area_text.add_body(text, size=20, color=BLACK,
                                 line_space=20, indent=10, fit_size=50, n_col=1)
 
+    def update_player_action(self, player):
+        text = 'Player action used: ' + str(player.action_used) + ' / ' + str(player.action)
+        self.action_used.add_text(text=text, size=18, color=BLACK, as_rect=False)
+
     def handel_event(self, event):
         self.bottom.handle_event(event)
+
+    def rtn_active(self):
+        return self.bottom.active
 
     def display(self, screen):
         if self.select:
@@ -654,6 +667,7 @@ class PlayerBoardSummary():
         self.area_text.display(screen, draw_rect=False)
         self.bottom.display(screen)
         self.bottom_text.display(screen)
+        self.action_used.display(screen)
 
 
 # player
@@ -674,6 +688,7 @@ class Player():
         self.key = ''
         self.city = ''
         self.hand = []
+        self.action_used = 0
 
         # might change base on character
         self.action = 4

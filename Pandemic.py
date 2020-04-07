@@ -60,7 +60,6 @@ USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 player_board = PlayerBoard()
 player_board.add_player_color(color_Scientist)  # ---------------------- debuging
 
-
 player_subboard1 = subboard(1)
 player_subboard2 = subboard(2)
 
@@ -166,11 +165,8 @@ while game_on:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             ###################################### print for debugging
-
-            print(player_board.rtn_select())
-            print(player_subboard1.rtn_select())
-            print(player_subboard2.rtn_select())
-
+            print(action)
+            print(target)
             sys.exit()
 
         active_city = ''
@@ -270,11 +266,16 @@ while game_on:
     player_tip_update(tips, player_target=active_player,
                       player_card_target=active_player_card, screen=screen)
 
+    ########### player's round
     # update player control board ---------------------------------------------------------debug
     player_board_key = player_subboard_update(players, cur_player, player_board_key,
                                               player_board, player_subboard1, player_subboard2,
                                               player_board_summary)
 
+    if player_board_summary.rtn_active():
+        # player click on confirm
+        action, target = player_action_confirm(players, cur_player,
+                                               player_board, player_subboard1, player_subboard2, player_board_summary)
 
     clock.tick(FPS)
     pg.display.flip()

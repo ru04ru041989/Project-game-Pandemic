@@ -52,7 +52,6 @@ def initial_lab():
 
 def initial_disease(dis_cube_num, disease_size):
     disease = {}
-
     find_cure = {}
     for i, dis_color in enumerate(['r', 'b', 'k', 'y']):
         #
@@ -148,7 +147,8 @@ def initial_player(cities):
 
     return players
 
-#---------------------------------------------- not adding sp card for debugging
+
+# ---------------------------------------------- not adding sp card for debugging
 def initial_player_card(cities):
     player_card = []
 
@@ -373,15 +373,86 @@ def infect_city(OK_bottom,
             return cur_infection_card_temp
 
 
+# player action confirm
+# return [action, associated item]
+def player_action_confirm(players, cur_player,
+                          player_board, player_subboard1, player_subboard2, player_board_summary):
+    action = player_board.rtn_select()
+    board1 = player_subboard1.rtn_select()
+    board2 = player_subboard2.rtn_select()
+
+    summary_text = ['Make sure you finish choosing',
+                    'before click confirm']
+
+    if action == 'Move':  # return which player to move
+        if not cur_player.move_other:
+            return ['Move', cur_player]
+        elif board1:
+            for player in players:
+                if player.name == board1:
+                    return ['Move', player]
+
+        summary_text = ['Please choose player to move']
+
+    if action == 'Build Lab':
+        if cur_player.building_action:
+            return ['Build Lab', '']
+        else:
+            for card in cur_player.hand:
+                if card.name == cur_player.city.txt:
+                    return ['Build Lab', card]
+
+    if action == 'Find Cure':
+        if board2:
+            board2 = board2 if isinstance(board2, list) else [board2]
+            if len(board2) >= cur_player.cure_need:
+                card_to_use = []
+                for card in cur_player.hand:
+                    if card.name in board2:
+                        card_to_use.append(card)
+                return ['Find Cure', card_to_use]
+        summary_text = ['Not enough city card',
+                        'Need ' + str(cur_player.cure_need) + ' same color cards']
+
+    if action == 'Treat disease':
+        treat_ls = [k for k, v in cur_player.city.disease.items() if len(v) != 0]
+        if not len(treat_ls):
+            summary_text = ['City has no disease',
+                            'Please choose another action']
+        else:
+            if len(treat_ls) == 1:
+                return ['Treat disease', treat_ls[0]]
+            elif board1:
+                return ['Treat disease', board1]
+
+            summary_text = ['City has more than one disease',
+                            'Please choose which one to treat']
+
+    if action == 'Share info':
+        if board1 and board2:
+            rtn = []
+            for player in players:
+                if player.name == board1:
+                    rtn.append(player)
+            for card in cur_player.hand:
+                if card.name == board2:
+                    rtn.append(card)
+
+            return ['Share', rtn]
+
+    player_board_summary.add_summary(summary_text)
+    return '', ''
+
+
 # player move
-def treat_city(cities, disease, city_name, disease_color, cure):
-    dis = cities[city_name].treat(disease_color)
+def treat(disease, player, disease_color, is_cure):
+    dis = player.city.treat(disease_color)
     if dis:
         disease[disease_color].append(dis)
 
-    if cure[disease_color]:
+    if is_cure[disease_color]:
         for i in range(3):
-            dis = cities[city_name].treat(disease_color)
+            dis = player.city.treat(disease_color)
             if dis:
                 disease[disease_color].append(dis)
 
@@ -480,9 +551,10 @@ def player_subboard_update(players, cur_player, player_board_key,
 
     player_board_summary.add_summary(summary_body)
 
-
+    player_board_summary.update_player_action(cur_player)
 
     return player_board_key
+
 
 # update indicater
 

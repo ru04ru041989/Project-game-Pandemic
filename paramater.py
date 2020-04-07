@@ -73,7 +73,7 @@ color_Scientist = (128, 128, 128)
 infect_rate = 2
 expose_time = 0
 player_card_per_round = 5
-cure = {'r': False, 'b': False, 'k': False, 'y': False}
+is_cure = {'r': False, 'b': False, 'k': False, 'y': False}
 lab_num = 6
 dis_cube_num = {'r': 24, 'b': 24, 'k': 24, 'y': 24}
 
