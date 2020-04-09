@@ -117,9 +117,9 @@ class InfectionCard():
 
         x, y = area.rect.topleft
         area_text = WordBox(x=x, y=y,
-                            w=infection_card_size[0], h=infection_card_size[1])
+                            w=infection_card_size[0], h=infection_card_size[1], as_rect=False)
 
-        area_text.add_text(text=city.txt, size=16, color=BLACK, as_rect=False)
+        area_text.add_text(text=city.txt, size=16, color=BLACK)
 
         self.name = city.txt
 
@@ -157,7 +157,7 @@ class PlayerCard():
         self.area = area
 
         #
-        area_text = WordBox(w=player_card_size[0], h=player_card_size[1])
+        area_text = WordBox(w=player_card_size[0], h=player_card_size[1], as_rect=True)
         area_text.add_text(text=string.capwords(city.txt), size=12, color=BLACK, is_cap=True)
         area_text.rotate_text(-90)
 
@@ -168,11 +168,18 @@ class PlayerCard():
         self.discribe = ''
         self.type = 'city'
 
+        # for drag
+        self.to_drag = False
+        self.drag = False
+        self.offset_x = 0
+        self.offset_y = 0
 
     def update_pos(self, x, y):
         self.area.update_pos(x, y)
         text_x, text_y = self.area.rect.midright
         self.area_text.rect.midright = (text_x, text_y)
+        #self.rect.x = x
+        #self.rect.y = y
 
     def add_discribe(self, discribe):
         self.discribe = discribe
@@ -182,6 +189,26 @@ class PlayerCard():
 
     def handle_event(self, event):
         self.area.handle_event(event)
+
+        if event.type == pg.MOUSEBUTTONDOWN:
+            # for dragging
+            if event.button == 1:
+                if self.area.rect.collidepoint(event.pos) and self.to_drag:
+                    self.drag = True
+                    mouse_x, mouse_y = event.pos
+                    self.offset_x = self.area.rect.x - mouse_x
+                    self.offset_y = self.area.rect.y - mouse_y
+        elif event.type == pg.MOUSEBUTTONUP:
+            # for dragging
+            if event.button == 1 and self.to_drag:
+                self.drag = False
+        elif event.type == pg.MOUSEMOTION:
+            # for dragging
+            if self.drag:
+                mouse_x, mouse_y = event.pos
+                new_x = mouse_x + self.offset_x
+                new_y = mouse_y + self.offset_y
+                self.update_pos(new_x, new_y)
 
     def rtn_target(self):
         if self.area.active:
@@ -223,7 +250,7 @@ class SpPlayerCard(PlayerCard):
 # ----------------------------------------------------------------------------------
 class DiseaseSummary():
     def __init__(self):
-        area_text = WordBox(w=disease_summary_size[0], h=disease_summary_size[1])
+        area_text = WordBox(w=disease_summary_size[0], h=disease_summary_size[1], as_rect=False)
 
         self.area_text = area_text
         self.num = 0
@@ -236,11 +263,11 @@ class DiseaseSummary():
 
     def add_num(self, num):
         self.num += num
-        self.area_text.add_text(text=str(self.num), size=18, color=BLACK, as_rect=False)
+        self.area_text.add_text(text=str(self.num), size=18, color=BLACK)
 
     def update_num(self, num):
         self.num = num
-        self.area_text.add_text(text=str(self.num), size=18, color=BLACK, as_rect=False)
+        self.area_text.add_text(text=str(self.num), size=18, color=BLACK)
 
     def display(self, screen):
         self.area_text.display(screen, is_fill=True)
@@ -301,10 +328,21 @@ class ControlBottom():
 
         # if select by other object
         self.select = False
+        self.on = False
 
     def update_pos(self, x, y):
         # set rect in area and area_text
         self.area.update_pos(x, y)
+
+    def turn_on(self):
+        self.on = True
+        self.select = True
+        self.area.update_color(ORANGE)
+
+    def turn_off(self):
+        self.on = False
+        self.select = False
+        self.area.update_color(WHITE)
 
     def set_select(self, select):
         self.select = select
@@ -312,15 +350,14 @@ class ControlBottom():
     def unclick(self):
         self.area.click = False
 
+    def handle_event(self, event):
+        if self.on:
+            self.area.handle_event(event)
+
     def rtn_click(self):
         return self.area.rtn_click()
 
     def display(self, screen):
-        if self.select:
-            self.area.update_color(ORANGE)
-        else:
-            self.area.update_color(WHITE)
-
         self.area.display_no_active(screen)
         self.area_text.display(screen)
 
@@ -354,7 +391,7 @@ class GameControl():
 
 # ----------------------------------------------------------------------- player
 class subboard():
-    def __init__(self, lv):
+    def __init__(self, lv=1):
         # size and pos
         self.x = player_control_board_pos[0] + 10 + (player_control_subtext_size[0] + 20) * lv
         self.y = player_control_board_pos[1] + 5
@@ -364,8 +401,8 @@ class subboard():
         subboard = [[], []]
         self.subboard = subboard
 
-        self.subboard_title = WordBox(x=self.x, y=self.y, w=self.w, h=self.h)
-        self.subboard_title.add_text(' ', size=16, color=BLACK, as_rect=False)
+        self.subboard_title = WordBox(x=self.x, y=self.y, w=self.w, h=self.h, as_rect=False)
+        self.subboard_title.add_text(' ', size=16, color=BLACK)
 
         self.title = ''
 
@@ -383,26 +420,22 @@ class subboard():
         self.has_active = False
 
         if key in infos:
-            self.subboard_title.add_text(text=infos[key][0], size=16, color=BLACK, as_rect=False)
+            self.subboard_title.add_text(text=infos[key][0], size=16, color=BLACK)
             self.title = infos[key][0]
 
             color, text, keep_active = infos[key][1], infos[key][2], infos[key][3]
 
             for i in range(len(color)):
-                if i < 5:
-                    box = SelectBox(x=self.x, y=self.y + self.h * (i + 1),
-                                    w=self.w, h=self.h, keep_active=False)
-                    box_text = WordBox(x=self.x, y=self.y + self.h * (i + 1),
-                                       w=self.w, h=self.h, keep_active=False)
-                else:
-                    box = SelectBox(x=self.x + self.w, y=self.y + self.h * (i + 1 - 5),
-                                    w=self.w, h=self.h, keep_active=False)
-                    box_text = WordBox(x=self.x + self.w, y=self.y + self.h * (i + 1 - 5),
-                                       w=self.w, h=self.h, keep_active=False)
+                y_adj = (i + 1) if i < 5 else (i + 1 - 5)
+                x_adj = 0 if i < 5 else 1
+                box = SelectBox(x=self.x + self.w * x_adj, y=self.y + self.h * y_adj,
+                                w=self.w, h=self.h, keep_active=False)
+                box_text = WordBox(x=self.x + self.w * x_adj + self.w * 0.5, y=self.y + self.h * y_adj + self.h * 0.5,
+                                   w=self.w, h=self.h, keep_active=False)
 
                 box.update_color(color[i])
                 box.update_method(keep_active)
-                box_text.add_text(text[i], size=16, color=BLACK, as_rect=False)
+                box_text.add_text(text[i], size=16, color=BLACK)
 
                 self.subboard[0].append(box)
                 self.subboard[1].append(box_text)
@@ -473,8 +506,8 @@ class PlayerBoard():
         subtext = ['Move', 'Build Lab', 'Find Cure', 'Treat disease', 'Share info']
         subtext_area = []
         for i, text in enumerate(subtext):
-            box = WordBox(x=x, y=y + h * i, w=w, h=h, keep_active=False)
-            box.add_text(text=text, size=16, color=BLACK, as_rect=False)
+            box = WordBox(x=x, y=y + h * i, w=w, h=h, keep_active=False, as_rect=False)
+            box.add_text(text=text, size=16, color=BLACK)
             subtext_area.append(box)
         self.subtext_area = subtext_area
 
@@ -491,7 +524,7 @@ class PlayerBoard():
     def update_city_pick(self, city):
         self.city_pick = city
 
-    def update_subboard_info(self, players, cur_player, active_city):
+    def update_subboard_info(self, players, cur_player, active_city, cities):
         # info for update
         city = cur_player.city
         hand = cur_player.hand
@@ -531,7 +564,11 @@ class PlayerBoard():
         else:
             build_ls = ['Yes'] if city.txt in hand_ls else ['Need city card']
 
+        lab_ls = [city.txt for city in cities.values() if city.lab]
+        lab_ls_color = [color_rbky[city.ctcolor] for city in cities.values() if city.lab]
+
         self.subboard1_info['Build Lab'] = ['Build', [WHITE], build_ls, False]
+        self.subboard2_info['Build Lab'] = ['Current Lab', lab_ls_color, lab_ls, False]
 
         # find cure
         if city.lab:
@@ -588,8 +625,8 @@ class PlayerBoard():
 
     def handle_event(self, event):
         self.area.handle_event(event)
-#        if not self.area.active:
-#            self.cur_subtext_area = ''
+        #        if not self.area.active:
+        #            self.cur_subtext_area = ''
 
         for i, box in enumerate(self.subtext_area):
             box.handle_event(event)
@@ -612,6 +649,7 @@ class PlayerBoardSummary():
         # summary action
         area_text = InfoBox(x=player_board_summary_pos[0],
                             y=player_board_summary_pos[1])
+        area_text.add_title(' ', size=2, color=BLACK)
         self.area_text = area_text
 
         # confirm bottom
@@ -631,8 +669,8 @@ class PlayerBoardSummary():
 
         # player action left
         action_used = WordBox(x=player_board_summary_pos[0] + player_control_subtext_size[0] * 0.8,
-                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1]*0.5)
-        action_used.add_text(text=' ', size=18, color=BLACK, as_rect=False, to_center=False)
+                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.5, as_rect=False)
+        action_used.add_text(text=' ', size=18, color=BLACK, to_center=False)
         self.action_used = action_used
 
     def add_summary(self, text):
@@ -642,7 +680,7 @@ class PlayerBoardSummary():
 
     def update_player_action(self, player):
         text = 'Player action used: ' + str(player.action_used) + ' / ' + str(player.action)
-        self.action_used.add_text(text=text, size=18, color=BLACK, as_rect=False)
+        self.action_used.add_text(text=text, size=18, color=BLACK)
 
     def handel_event(self, event):
         self.bottom.handle_event(event)
@@ -670,7 +708,7 @@ class Player():
     def __init__(self):
         self.pawn = ImgBox(w=player_pawn_size[0], h=player_pawn_size[1], keep_active=False)
         self.area = SelectBox(w=player_area_size[0], h=player_area_size[1], thick=0, keep_active=False)
-        self.area_text = WordBox(w=player_area_size[0], h=player_area_size[1])
+        self.area_text = WordBox(w=player_area_size[0], h=player_area_size[1], as_rect=True)
 
         self.pawn_size = player_pawn_size
         self.init_angle = 0
@@ -687,7 +725,7 @@ class Player():
 
         # might change base on character
         self.action = 4
-        self.handlimit = 7
+        self.handlimit = 3
         self.cure_need = 5
         self.building_action = False
         self.supertreat = False
@@ -751,7 +789,7 @@ class Player():
         x = self.area.rect.x + self.area.rect.w - player_card_size[0] * 0.5
         y = [self.area.rect.y + player_card_size[1] * 0.2,
              self.area.rect.y]
-        for i in range(self.handlimit):
+        for i in range(self.handlimit + 1):
             # calculate
             cur_x = x - (i + 1) * player_card_size[0] * 0.5
             cur_y = y[1] if i % 2 else y[0]
@@ -760,7 +798,6 @@ class Player():
                 # update the card to that pos
                 self.hand[i].update_pos(x=cur_x, y=cur_y)
                 self.hand[i].display(screen)
-
 
 
 class Scientist(Player):

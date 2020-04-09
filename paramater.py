@@ -24,7 +24,7 @@ infection_card_img_pos = (650, 500)
 player_pawn_size = (16, 20)
 player_area_size = (250, 120)
 # ----------------------------------
-player_card_size = (60, 100)
+player_card_size = (50, 100)
 player_card_img_pos = (20, 450)
 # ----------------------------------
 tip = {'city': (10, 10, 300, 65),
@@ -45,6 +45,9 @@ player_board_summary_size = (390, 150)
 player_board_summary_pos = (585, 635)
 CONFIRM_bottom_size = (80, 40)
 CONFIRM_bottom_pos = (900, 745)
+
+# select list board
+list_board_item_size = (120, 30)
 
 ####################################
 # color

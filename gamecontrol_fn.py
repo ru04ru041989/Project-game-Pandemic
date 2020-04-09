@@ -72,8 +72,8 @@ def initial_disease(dis_cube_num, disease_size):
         disease[dis_color] = dis_temp
 
         #
-        cure_temp = WordBox(w=disease_summary_size[0], h=disease_summary_size[1])
-        cure_temp.add_text(text='No Cure', size=12, color=WHITE, as_rect=False)
+        cure_temp = WordBox(w=disease_summary_size[0], h=disease_summary_size[1], as_rect=False)
+        cure_temp.add_text(text='No Cure', size=12, color=WHITE)
         cure_temp.update_pos(x=disease_summary_pos[0] + i * disease_summary_size[0],
                              y=disease_summary_pos[1] + disease_summary_size[1])
         cure_temp.add_fill_color(BLACK)
@@ -91,8 +91,9 @@ def initial_disease_summary():
         dis_sum.add_fill_color(color_rbky[dis_color])
         disease_cube_summary[dis_color] = dis_sum
 
-    disease_cube_summary_title = WordBox(w=disease_summary_size[0], h=disease_summary_size[1])
-    disease_cube_summary_title.add_text(text='The rest of the disease, game over if = 0 !!!', size=18, color=WHITE)
+    disease_cube_summary_title = WordBox(w=disease_summary_size[0], h=disease_summary_size[1], as_rect=True)
+    disease_cube_summary_title.add_text(text='Game Over if Disease = 0 !!!',
+                                        size=16, color=WHITE, to_center=False)
     disease_cube_summary_title.update_pos(x=disease_summary_pos[0], y=disease_summary_pos[1] - disease_summary_size[1])
     disease_cube_summary_title.add_fill_color(BLACK)
     return disease_cube_summary, disease_cube_summary_title
@@ -234,13 +235,13 @@ def initial_game_control():
 #  process
 ################################
 
-def assign_next_step(game_control, step_name):
+def assign_next_step(game_control, step_name,OK_bottom):
     key = list(game_control[step_name].action)[0]
     game_control[step_name].action[key][0] = True
-
-
-def player_action_round():
-    pass
+    if step_name == 'player_draw' or step_name in infection_disease_num:
+        OK_bottom.turn_on()
+    else:
+        OK_bottom.turn_off()
 
 
 def player_get_card(OK_bottom,
@@ -270,6 +271,7 @@ def player_get_card(OK_bottom,
 
     if control.action['is_player_get_card_phase'][0]:
         control_tip_update(tips, 'Press OK to draw player card')
+        OK_bottom.unclick()
 
     # draw player card
     if control.action['is_player_get_card_phase'][1]:
@@ -279,6 +281,7 @@ def player_get_card(OK_bottom,
 
         control.action['is_player_get_card_phase'][1] = False
         control.action['is_player_draw_card'][0] = True
+        OK_bottom.unclick()
         return card
 
     # add to player's hand
@@ -289,11 +292,9 @@ def player_get_card(OK_bottom,
 
         control.action['is_player_draw_card'][1] = False
         control.action['is_player_get_card'][0] = True
+        OK_bottom.unclick()
 
-    # after adding, disable ok and start the next phase
     if control.action['is_player_get_card'][1]:
-        # disable OK
-        OK_bottom.set_select(False)
         control.action['is_player_get_card'][1] = False
 
         # check if need to repeat
@@ -304,8 +305,12 @@ def player_get_card(OK_bottom,
         else:
             # re-set the repeat, and move on the the next one
             control.paramater['rep'] = control.paramater['rep_reset']
-            assign_next_step(game_control, next_step)
+            turn_OK_off(OK_bottom)
+            assign_next_step(game_control, next_step, OK_bottom)
         OK_bottom.unclick()
+        OK_bottom.set_select(False)
+
+        control_tip_update(tips, ' ')
 
 
 def helper_infect_city(OK_bottom,
@@ -329,7 +334,7 @@ def helper_infect_city(OK_bottom,
     # update tip
     if control.action['is_infection_phase'][0]:
         control_tip_update(tips, tip_text)
-
+        OK_bottom.unclick()
     # draw infection card
     if control.action['is_infection_phase'][1]:
         control_tip_update(tips, 'Press OK to infect the city')
@@ -338,6 +343,7 @@ def helper_infect_city(OK_bottom,
 
         control.action['is_infection_phase'][1] = False
         control.action['is_infect_city'][0] = True
+        OK_bottom.unclick()
         return card
 
     # infection city
@@ -355,11 +361,9 @@ def helper_infect_city(OK_bottom,
             cities[city_name].update_active(True)
 
         # update dis_cube_num
-     #   cur_num = disease_cube_summary[cities[city_name].ctcolor].num
-        disease_cube_summary[cities[city_name].ctcolor].add_num(-1*control.paramater['dis_num'])
+        #   cur_num = disease_cube_summary[cities[city_name].ctcolor].num
+        disease_cube_summary[cities[city_name].ctcolor].add_num(-1 * control.paramater['dis_num'])
 
-        # disable OK bottom
-        OK_bottom.set_select(False)
         control.action['is_infect_city'][1] = False
 
         # check if need to repeat
@@ -370,8 +374,12 @@ def helper_infect_city(OK_bottom,
         else:
             # re-set the repeat, and move on the the next one
             control.paramater['rep'] = control.paramater['rep_reset']
-            assign_next_step(game_control, next_step)
+            turn_OK_off(OK_bottom)
+            assign_next_step(game_control, next_step, OK_bottom)
         OK_bottom.unclick()
+        OK_bottom.set_select(False)
+
+        control_tip_update(tips, ' ')
 
 
 def infect_city(OK_bottom,
@@ -392,14 +400,13 @@ def infect_city(OK_bottom,
 
 # player action confirm
 # return [action, associated item]
-def player_action_confirm(players, cur_player,
+def player_action_confirm(players, cur_player, labs, cities,
                           player_board, player_subboard1, player_subboard2, player_board_summary):
     action = player_board.rtn_select()
     board1 = player_subboard1.rtn_select()
     board2 = player_subboard2.rtn_select()
 
-    summary_text = ['Make sure you finish choosing',
-                    'before click confirm']
+    summary_text = ['Make sure you finish choosing', 'before click confirm']
 
     player_board_summary.set_active(False)
 
@@ -431,12 +438,25 @@ def player_action_confirm(players, cur_player,
         if cur_player.city.lab:
             summary_text = ['City has lab already']
         else:
-            if cur_player.building_action:
-                return ['Build', '']
+            if labs:
+                if cur_player.building_action:
+                    return ['Build', ['', '']]
+                else:
+                    for card in cur_player.hand:
+                        if card.name == cur_player.city.txt:
+                            return ['Build', [card, '']]
             else:
-                for card in cur_player.hand:
-                    if card.name == cur_player.city.txt:
-                        return ['Build', card]
+                if board2:
+                    for city in cities:
+                        if city.txt == board2:
+                            rp_lab = city
+
+                    if cur_player.building_action:
+                        return ['Build', ['', rp_lab]]
+                    else:
+                        for card in cur_player.hand:
+                            if card.name == cur_player.city.txt:
+                                return ['Build', [card, rp_lab]]
 
     if action == 'Find Cure':
         summary_text = ['Not enough city card',
@@ -484,12 +504,11 @@ def player_action_confirm(players, cur_player,
     # after comfirm, reset player_board
     player_board.update_city_pick('')
 
-
     return '', ''
 
 
 # helper function
-def using_card(player, card, player_card_active, player_card_discard):
+def discard_card(player, card, player_card_active, player_card_discard):
     player.hand.remove(card)
     player_card_active.remove(card)
     player_card_discard.append(card)
@@ -498,20 +517,26 @@ def using_card(player, card, player_card_active, player_card_discard):
 
 
 # player's action
-
 def move(cur_player, player_to_move, city_move_to, card_to_use,
          player_card_active, player_card_discard):
     player_to_move.pos_update(city_move_to)
     if card_to_use:
-        using_card(cur_player, card_to_use, player_card_active, player_card_discard)
+        discard_card(cur_player, card_to_use, player_card_active, player_card_discard)
     cur_player.action_used += 1
 
-def build(cur_player, card_to_use, labs, player_card_active, player_card_discard):
+
+def build(cur_player, card_to_use, rp_lab, labs, player_card_active, player_card_discard):
     if not cur_player.city.lab:
-        cur_player.city.build_lab(labs.pop())
+        if labs:
+            cur_player.city.build_lab(labs.pop())
+        else:
+            cur_player.city.build_lab(rp_lab.lab)
+            rp_lab.lab = ''
+
         if not cur_player.building_action:
-            using_card(cur_player, card_to_use, player_card_active, player_card_discard)
+            discard_card(cur_player, card_to_use, player_card_active, player_card_discard)
     cur_player.action_used += 1
+
 
 def discover_cure(cur_player, cards, is_cure, find_cure, player_card_active, player_card_discard):
     for k, v in color_rbky.items():
@@ -521,8 +546,9 @@ def discover_cure(cur_player, cards, is_cure, find_cure, player_card_active, pla
     find_cure[dis_type].add_text(text='Found', size=12, color=WHITE, as_rect=False)
 
     for card in cards:
-        using_card(cur_player, card, player_card_active, player_card_discard)
+        discard_card(cur_player, card, player_card_active, player_card_discard)
     cur_player.action_used += 1
+
 
 def treat(cur_player, disease_color, disease, is_cure, disease_cube_summary):
     dis = cur_player.city.treat(disease_color)
@@ -536,6 +562,7 @@ def treat(cur_player, disease_color, disease, is_cure, disease_cube_summary):
             if dis:
                 disease[disease_color].append(dis)
     cur_player.action_used += 1
+
 
 def share(cur_player, target_player, card):
     cur_player.hand.remove(card)
@@ -600,13 +627,14 @@ def control_tip_update(tips, body):
 def player_subboard_update(player_board, player_subboard1, player_subboard2,
                            player_board_summary,
                            players, cur_player, player_board_key,
-                           active_city, force_update=False):
+                           active_city, cities, labs,
+                           force_update=False):
     player_board.add_player_color(cur_player.color)
-    player_board.update_subboard_info(players, cur_player, active_city)
+    player_board.update_subboard_info(players, cur_player, active_city, cities)
     sub1_infos, sub2_infos = player_board.rtn_subboard_info()
     temp_player_board_key = player_board.rtn_select()
 
-    #action = player_board.rtn_select()
+    # action = player_board.rtn_select()
     if active_city:
         force_update = True
 
@@ -664,8 +692,17 @@ def player_subboard_update(player_board, player_subboard1, player_subboard2,
             else:
                 result = 'NA'
 
-        summary_body = ['Action: ' + action,
-                        'Executable: ' + result]
+        if labs:
+            summary_body = ['Action: ' + action, 'Executable: ' + result]
+        else:
+            if board2:
+                summary_body = ['Action: ' + action,
+                                'Executable: ' + result,
+                                'Replace lab from: ' + string.capwords(board2)]
+            else:
+                summary_body = ['Action: ' + action,
+                                'Executable: please choose a lab to replace',
+                                'Replace lab from: NA']
 
     elif action == 'Find Cure' and board2:
         board2 = board2 if isinstance(board2, list) else [board2]
@@ -708,6 +745,7 @@ def hightlight_city(cities, rtn_infection_card, rtn_player_card, cur_infection_c
 # manage set of display / handel event
 #########
 
+# --------------------------------------------------       for player_round
 def player_round_display(screen, is_player_round,
                          player_board, player_board_summary,
                          player_subboard1, player_subboard2):
@@ -728,3 +766,14 @@ def player_round_handel_event(event, is_player_round,
 
         player_subboard1.handel_event(event)
         player_subboard2.handel_event(event)
+
+def turn_OK_off(OK_bottom):
+    #OK_bottom.unclick()
+    OK_bottom.turn_off()
+
+def turn_OK_on(OK_bottom):
+   # OK_bottom.unclick()
+    OK_bottom.turn_on()
+
+
+

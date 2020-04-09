@@ -52,20 +52,23 @@ cur_player_card = ''
 # tips
 tips = initial_tip()
 
+#-----------------------------------------------------------------  game control
 # control bottom
 OK_bottom = ControlBottom('OK', OK_bottom_pos, OK_bottom_size)
 USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
-
+#-----------------------------------------------------------------  interact board
 # player board
 player_board = PlayerBoard()
-
 player_subboard1 = subboard(1)
 player_subboard2 = subboard(2)
-
 player_board_summary = PlayerBoardSummary()
-player_board_summary.add_summary(['test'])  # ------------------------------
-
 player_board_key = ''
+
+## special case control
+# hand card over limit
+is_hand_over_limit = False
+hand_over_limit = SelectBoard()
+hand_over_limit.add_title('Holding too many cards, discard one')
 
 #####################
 #####################
@@ -75,7 +78,7 @@ player_board_key = ''
 game_control = initial_game_control()
 
 # first event = initial_infection1---------------------------debug mode, start at normal infection
-assign_next_step(game_control, 'normal_infection')
+assign_next_step(game_control, 'normal_infection',OK_bottom)
 cur_player = players[1]
 '''
 for k, v in game_control.items():
@@ -85,6 +88,13 @@ for k, v in game_control.items():
     print(v.action)
     print('--------')
 '''
+
+###################################################################################  testing new item
+test = SelectBoard()
+test.add_title('testing selectboard sjeialjasidjfilasdjfleij')
+test.add_ls(['a','b', 'c', 'd', 'e', 'f', 'g'], keep_active=True)
+
+
 ######################################################
 ######################################################
 # game start
@@ -105,6 +115,9 @@ while game_on:
     if infection_discard:
         infection_discard[-1].display(screen)
 
+    if cur_infection_card:
+        cur_infection_card.display(screen)
+
     # player card
     player_card_img.update_select(game_control['player_draw'].rtn_action_active()[0])
     player_card_img.display(screen)
@@ -112,6 +125,9 @@ while game_on:
 
     if player_card_discard:
         player_card_discard[-1].display(screen)
+
+    if cur_player_card:
+        cur_player_card.display(screen)
 
     # indicater
     # update indicater
@@ -147,27 +163,36 @@ while game_on:
     for tip in tips:
         tips[tip].display(screen)
 
-    # game control
-    for val in game_control.values():
-        for v in val.rtn_action_active():
-            if v:
-                OK_bottom.set_select(True)
-    OK_bottom.display(screen)
-    USE_bottom.display(screen)
-
     # player board
-    ## might have different board to display
     player_round_display(screen, game_control['player_round'].rtn_action_active()[0],
                          player_board, player_board_summary,
                          player_subboard1, player_subboard2)
 
+    # game control
+
+    # bottoms
+    for val in game_control['player_draw'].action.values():
+        if val[0]:
+            OK_bottom.set_select(True)
+    for key in infection_disease_num:
+        for val in game_control[key].action.values():
+            if val[0]:
+                OK_bottom.set_select(True)
+    OK_bottom.display(screen)
+    USE_bottom.display(screen)
+
+    # special case
+    if is_hand_over_limit:
+        hand_over_limit.display(screen)
+
     # ---------------------------------------------------------------------------------
+
+    # ---------------------------------------------------------------------------------
+    ####################################################################################
     ### event
     for event in pg.event.get():
         if event.type == pg.QUIT:
             ###################################### print for debugging
-            print(action)
-            print(target)
             sys.exit()
 
         active_city = ''
@@ -205,11 +230,8 @@ while game_on:
                                   player_subboard1, player_subboard2)
 
         # ----------------------------------- using ok bottom click as moving marker to next step
-        # check if OK got click
-        OK_bottom.area.handle_event(event)
-
+        OK_bottom.handle_event(event)
         # ------------------------------------ using use bottom click to see if want to use special card
-        # check if active_player_card is special card
         USE_bottom.set_select(False)
         if active_player_card:
             if active_player_card.type == 'special':
@@ -217,55 +239,93 @@ while game_on:
                 USE_bottom.set_select(True)
                 USE_bottom.display(screen)
                 # keep track if USE click
-                USE_bottom.area.handle_event(event)
+                USE_bottom.handle_event(event)
+
+        ### special case control
+
+        # player has too many cards
+        if is_hand_over_limit:
+            hand_over_limit.handel_event(event)
+
+    # ---------------------------------------------------------------------------------
+
     # ---------------------------------------------------------------------------------
 
     ### after event
 
-    ##----------------------------------------------------------------------------------------------
-    ## player's action .......... this process only executive in player_round
-
-    # update player control board ---------------------------------------------------------debug
-    player_board_key = player_subboard_update(player_board, player_subboard1, player_subboard2,
-                                              player_board_summary,
-                                              players, cur_player, player_board_key, active_city)
-
-    if player_board_summary.rtn_active():
+    ## player's action
+    if game_control['player_round'].action['is_player_round_phase'][0]:
+        # update player control board ---------------------------------------------------------debug
+        player_board_key = player_subboard_update(player_board, player_subboard1, player_subboard2,
+                                                  player_board_summary,
+                                                  players, cur_player, player_board_key,
+                                                  active_city, cities, labs)
         # player click on confirm
-        action, target = player_action_confirm(players, cur_player,
-                                               player_board, player_subboard1, player_subboard2, player_board_summary)
+        if player_board_summary.rtn_active():
+            action, target = player_action_confirm(players, cur_player, labs, cities,
+                                                   player_board, player_subboard1, player_subboard2,
+                                                   player_board_summary)
+            if action == 'Move':
+                move(cur_player, target[0], target[1], target[2],
+                     player_card_active, player_card_discard)
 
-        if action == 'Move':
-            move(cur_player, target[0], target[1], target[2],
-                 player_card_active, player_card_discard)
+            if action == 'Share':
+                share(cur_player, target[0], target[1])
 
-        if action == 'Share':
-            share(cur_player, target[0], target[1])
+            if action == 'Cure':
+                discover_cure(cur_player, target, is_cure, find_cure, player_card_active, player_card_discard)
 
-        if action == 'Cure':
-            discover_cure(cur_player, target, is_cure, find_cure, player_card_active, player_card_discard)
+            if action == 'Build':
+                build(cur_player, target[0], target[1], labs, player_card_active, player_card_discard)
 
-        if action == 'Build':
-            build(cur_player, target, labs, player_card_active, player_card_discard)
+            if action == 'Treat':
+                treat(cur_player, target, disease, is_cure, disease_cube_summary)
 
-        if action == 'Treat':
-            treat(cur_player, target, disease, is_cure, disease_cube_summary)
+            player_subboard_update(player_board, player_subboard1, player_subboard2,
+                                   player_board_summary,
+                                   players, cur_player, player_board_key, active_city, cities, labs,
+                                   force_update=True)
 
-        player_subboard_update(player_board, player_subboard1, player_subboard2,
-                               player_board_summary,
-                               players, cur_player, player_board_key, active_city, force_update=True)
+        # action phase is over, start player get card phase, setup the associated paramatar ---- after sweach player, reset action used
+        if cur_player.action_used == cur_player.action:
+            game_control['player_round'].action['is_player_round_phase'][0] = False
+            assign_next_step(game_control, 'player_draw')
 
-    ##-------------------------------------------------------------------------------------------------------
-    ## player get card
+
+    ## player get card phase
+    #----------------------------------------------------------
+    # player get card
     cur_player_card_temp = player_get_card(OK_bottom,
                                            cur_player, player_card, player_card_active, cur_player_card, tips,
                                            game_control, cur_step='player_draw', next_step='player_round')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
-    if cur_player_card:
-        cur_player_card.display(screen)
 
     # ----------------------------------------------------------if this player card is an expose card...
+
+    # ----------------------------------------------------------if this  player has too many card
+    if len(cur_player.hand) <= cur_player.handlimit:
+        is_hand_over_limit = False
+        turn_OK_on(OK_bottom)
+
+    else:
+        turn_OK_off(OK_bottom)
+        control_tip_update(tips, 'Discard one card to continue')
+        # display another interaction board and select one card to discard
+        is_hand_over_limit = True
+        card_ls = [card.name for card in cur_player.hand]
+        card_color = [card.color for card in cur_player.hand]
+        if hand_over_limit.rtn_ls_content() != card_ls:
+            hand_over_limit.add_ls(card_ls, card_color)
+
+        if hand_over_limit.rtn_confirm():
+            card_pick = [card for card in cur_player.hand if card.name == hand_over_limit.rtn_select()]
+            if card_pick:
+                card = card_pick[0]
+                discard_card(cur_player, card, player_card_active, player_card_discard)
+
+
+
 
     ##------------------------------------------------------------------------------------------------------
     ## infection phase
@@ -277,8 +337,7 @@ while game_on:
 
     if cur_infection_card_temp:
         cur_infection_card = cur_infection_card_temp
-    if cur_infection_card:
-        cur_infection_card.display(screen)
+
 
     ##--------------------------------------------------------------------------------------------  start a new round
 
