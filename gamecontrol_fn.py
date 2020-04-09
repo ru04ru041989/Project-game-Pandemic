@@ -178,6 +178,15 @@ def initial_player_card(cities):
         card.update_color(GREEN)
         player_card.append(card)
     '''
+    # expose card
+    card = SpPlayerCard('expose')
+    card.add_discribe(['Expose time +1',
+                       'draw infection card and infect the city',
+                       'shuffle the discard infection pile and add back to infection pile'])
+    card.update_color((0, 155, 0))
+    card.expose()
+    player_card.append(card)  # ----------------------------------------------------------------------------
+
     player_card_img = ImgBox(x=player_card_img_pos[0], y=player_card_img_pos[1],
                              w=player_card_size[0], h=player_card_size[1], thick=5, color=RED)
     player_card_img.add_img(filename='\\img\\playercard.png', size=player_card_size, to_center=False)
@@ -235,13 +244,24 @@ def initial_game_control():
 #  process
 ################################
 
-def assign_next_step(game_control, step_name,OK_bottom):
+def assign_next_step(game_control, step_name, OK_bottom):
+    # check if any phase is ongoing, if yes, need to return to mark as suspended
+    suspended_task = ''
+    for val in game_control.values():
+
+        for v in val.action.values():
+            if v[0]:
+                suspended_task = val.id
+                v[0] = False
+
     key = list(game_control[step_name].action)[0]
     game_control[step_name].action[key][0] = True
-    if step_name == 'player_draw' or step_name in infection_disease_num:
+    if step_name == 'player_draw' or step_name in infection_disease_num or 'expose_infection':
         OK_bottom.turn_on()
     else:
         OK_bottom.turn_off()
+
+    return suspended_task
 
 
 def player_get_card(OK_bottom,
@@ -277,7 +297,8 @@ def player_get_card(OK_bottom,
     if control.action['is_player_get_card_phase'][1]:
         control_tip_update(tips, 'Press OK to add this card to hand or continue next step')
         card = player_card.pop()
-        player_card_active.append(card)
+        if card.name != 'expose':
+            player_card_active.append(card)
 
         control.action['is_player_get_card_phase'][1] = False
         control.action['is_player_draw_card'][0] = True
@@ -288,7 +309,8 @@ def player_get_card(OK_bottom,
     if control.action['is_player_draw_card'][1]:
         control_tip_update(tips, 'Press OK to continue')
         if cur_player_card:
-            player.add_hand(cur_player_card)
+            if cur_player_card.name != 'expose':
+                player.add_hand(cur_player_card)
 
         control.action['is_player_draw_card'][1] = False
         control.action['is_player_get_card'][0] = True
@@ -339,7 +361,11 @@ def helper_infect_city(OK_bottom,
     if control.action['is_infection_phase'][1]:
         control_tip_update(tips, 'Press OK to infect the city')
 
-        card = infection_card.pop()
+        # in expose case, draw the first one
+        if cur_step == 'expose_infection':
+            card = infection_card.pop(0)
+        else:
+            card = infection_card.pop()
 
         control.action['is_infection_phase'][1] = False
         control.action['is_infect_city'][0] = True
@@ -371,15 +397,26 @@ def helper_infect_city(OK_bottom,
         if control.paramater['rep'] != 0:
             # repeat the process
             control.action['is_infection_phase'][0] = True
+            OK_bottom.unclick()
+            OK_bottom.set_select(False)
+            control_tip_update(tips, ' ')
         else:
             # re-set the repeat, and move on the the next one
             control.paramater['rep'] = control.paramater['rep_reset']
             turn_OK_off(OK_bottom)
             assign_next_step(game_control, next_step, OK_bottom)
-        OK_bottom.unclick()
-        OK_bottom.set_select(False)
+            OK_bottom.unclick()
+            OK_bottom.set_select(False)
+            control_tip_update(tips, ' ')
 
-        control_tip_update(tips, ' ')
+            # if this is the expose_infection, shuffle the infection discard and add back
+            if cur_step == 'expose_infection':
+                random.shuffle(infection_discard)
+                infection_card.extend(infection_discard)
+                infection_discard.clear()
+                return 'done'
+
+
 
 
 def infect_city(OK_bottom,
@@ -395,7 +432,8 @@ def infect_city(OK_bottom,
                                                      disease_cube_summary, tips,
                                                      game_control, cur_step, next_step, tip_text)
         if cur_infection_card_temp:
-            return cur_infection_card_temp
+            if cur_infection_card_temp != 'done':
+                return cur_infection_card_temp
 
 
 # player action confirm
@@ -767,13 +805,22 @@ def player_round_handel_event(event, is_player_round,
         player_subboard1.handel_event(event)
         player_subboard2.handel_event(event)
 
+
 def turn_OK_off(OK_bottom):
-    #OK_bottom.unclick()
+    # OK_bottom.unclick()
     OK_bottom.turn_off()
 
+
 def turn_OK_on(OK_bottom):
-   # OK_bottom.unclick()
+    # OK_bottom.unclick()
     OK_bottom.turn_on()
 
-
-
+###############################################################
+# debug fn
+def pnt_game_control(game_control, suspended_task):
+    for v in game_control.values():
+        print(v.id)
+        print(v.paramater)
+        print(v.action)
+        print('--------')
+    print(suspended_task)

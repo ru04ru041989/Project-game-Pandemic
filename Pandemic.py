@@ -52,11 +52,11 @@ cur_player_card = ''
 # tips
 tips = initial_tip()
 
-#-----------------------------------------------------------------  game control
+# -----------------------------------------------------------------  game control
 # control bottom
 OK_bottom = ControlBottom('OK', OK_bottom_pos, OK_bottom_size)
 USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
-#-----------------------------------------------------------------  interact board
+# -----------------------------------------------------------------  interact board
 # player board
 player_board = PlayerBoard()
 player_subboard1 = subboard(1)
@@ -78,22 +78,13 @@ hand_over_limit.add_title('Holding too many cards, discard one')
 game_control = initial_game_control()
 
 # first event = initial_infection1---------------------------debug mode, start at normal infection
-assign_next_step(game_control, 'normal_infection',OK_bottom)
+suspended_task = assign_next_step(game_control, 'normal_infection', OK_bottom)
 cur_player = players[1]
-'''
-for k, v in game_control.items():
-    print(k)
-    print(v.id)
-    print(v.paramater)
-    print(v.action)
-    print('--------')
-'''
 
 ###################################################################################  testing new item
 test = SelectBoard()
 test.add_title('testing selectboard sjeialjasidjfilasdjfleij')
-test.add_ls(['a','b', 'c', 'd', 'e', 'f', 'g'], keep_active=True)
-
+test.add_ls(['a', 'b', 'c', 'd', 'e', 'f', 'g'], keep_active=True)
 
 ######################################################
 ######################################################
@@ -291,9 +282,7 @@ while game_on:
             game_control['player_round'].action['is_player_round_phase'][0] = False
             assign_next_step(game_control, 'player_draw')
 
-
     ## player get card phase
-    #----------------------------------------------------------
     # player get card
     cur_player_card_temp = player_get_card(OK_bottom,
                                            cur_player, player_card, player_card_active, cur_player_card, tips,
@@ -302,8 +291,31 @@ while game_on:
         cur_player_card = cur_player_card_temp
 
     # ----------------------------------------------------------if this player card is an expose card...
+    if cur_player_card:
+        if cur_player_card.name == 'expose':
+            # put the card to discard
+            cur_player_card.update_pos(x=player_card_img_pos[0] + player_card_size[0] + 15,
+                                       y=player_card_img_pos[1])
+            player_card_discard.append(cur_player_card)
+            expose_time += 1
+            cur_player_card = ''
 
-    # ----------------------------------------------------------if this  player has too many card
+            # add the cur task to suspended, and assign to expose_infection
+            suspended_task = assign_next_step(game_control, 'expose_infection', OK_bottom)
+
+    cur_infection_card_temp = helper_infect_city(OK_bottom,
+                                                 cities, disease, infection_card, infection_discard,
+                                                 cur_infection_card,
+                                                 disease_cube_summary, tips,
+                                                 game_control, 'expose_infection', suspended_task,
+                                                 'Press OK to start expose!')
+    if cur_infection_card_temp:
+        if cur_infection_card_temp != 'done':
+            cur_infection_card = cur_infection_card_temp
+        else:
+            cur_infection_card = ''
+
+    # if this  player has too many card
     if len(cur_player.hand) <= cur_player.handlimit:
         is_hand_over_limit = False
         turn_OK_on(OK_bottom)
@@ -324,9 +336,6 @@ while game_on:
                 card = card_pick[0]
                 discard_card(cur_player, card, player_card_active, player_card_discard)
 
-
-
-
     ##------------------------------------------------------------------------------------------------------
     ## infection phase
     cur_infection_card_temp = infect_city(OK_bottom,
@@ -337,7 +346,6 @@ while game_on:
 
     if cur_infection_card_temp:
         cur_infection_card = cur_infection_card_temp
-
 
     ##--------------------------------------------------------------------------------------------  start a new round
 

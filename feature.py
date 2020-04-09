@@ -178,8 +178,6 @@ class PlayerCard():
         self.area.update_pos(x, y)
         text_x, text_y = self.area.rect.midright
         self.area_text.rect.midright = (text_x, text_y)
-        #self.rect.x = x
-        #self.rect.y = y
 
     def add_discribe(self, discribe):
         self.discribe = discribe
@@ -242,10 +240,18 @@ class SpPlayerCard(PlayerCard):
         self.discribe = ''
         self.type = 'special'
 
+        # for drag
+        self.to_drag = False
+        self.drag = False
+        self.offset_x = 0
+        self.offset_y = 0
+
     def update_color(self, color):
         self.color = color
         self.area.update_color(color)
 
+    def expose(self):
+        self.type = 'expose'
 
 # ----------------------------------------------------------------------------------
 class DiseaseSummary():
