@@ -75,7 +75,7 @@ color_Scientist = (128, 128, 128)
 # game setting
 infect_rate = 2
 expose_time = 0
-player_card_per_round = 5
+player_card_per_round = 2
 is_cure = {'r': False, 'b': False, 'k': False, 'y': False}
 lab_num = 6
 dis_cube_num = {'r': 24, 'b': 24, 'k': 24, 'y': 24}
@@ -104,8 +104,8 @@ infection_disease_num = {
     'initial_infection1': [3, 3],
     'initial_infection2': [2, 3],
     'initial_infection3': [1, 3],
-    'normal_infection': [1, infect_rate],
-    'expose_infection': [3, 1]
+    'expose_infection': [3, 1],
+    'normal_infection': [1, infect_rate]
 }
 
 infect_action = {

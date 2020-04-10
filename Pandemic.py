@@ -17,6 +17,13 @@ pg.init()
 screen = pg.display.set_mode((screen_width, screen_height))
 pg.display.set_caption("Pandemic")
 
+##############################################################################
+##############################################################################
+# pre_game setting [selecting how many player and the characher
+
+
+##############################################################################
+##############################################################################
 # prepare world
 WorldMap = initial_map(map_size)
 
@@ -45,6 +52,11 @@ players = initial_player(cities)
 
 # player card
 player_card, player_card_img, player_card_discard_img = initial_player_card(cities)
+# distribute player's hand card
+
+# adding epidemic_card
+
+
 player_card_active = []
 player_card_discard = []
 cur_player_card = ''
@@ -67,7 +79,7 @@ player_board_key = ''
 ## special case control
 # hand card over limit
 is_hand_over_limit = False
-hand_over_limit = SelectBoard()
+hand_over_limit = SelectBoard(w=player_control_board_size[0]/2)
 hand_over_limit.add_title('Holding too many cards, discard one')
 
 #####################
@@ -81,7 +93,8 @@ game_control = initial_game_control()
 suspended_task = assign_next_step(game_control, 'normal_infection', OK_bottom)
 cur_player = players[1]
 
-###################################################################################  testing new item
+pnt_game_control(game_control, suspended_task)
+#------------------------------------------------------------------------  testing new item
 test = SelectBoard()
 test.add_title('testing selectboard sjeialjasidjfilasdjfleij')
 test.add_ls(['a', 'b', 'c', 'd', 'e', 'f', 'g'], keep_active=True)
@@ -162,13 +175,7 @@ while game_on:
     # game control
 
     # bottoms
-    for val in game_control['player_draw'].action.values():
-        if val[0]:
-            OK_bottom.set_select(True)
-    for key in infection_disease_num:
-        for val in game_control[key].action.values():
-            if val[0]:
-                OK_bottom.set_select(True)
+
     OK_bottom.display(screen)
     USE_bottom.display(screen)
 
@@ -187,12 +194,12 @@ while game_on:
             sys.exit()
 
         active_city = ''
-        for city in cities:
+        for city in cities.values():
             # re-set select
-            cities[city].update_select(False)
-            cities[city].handle_event(event)
-            if cities[city].rtn_active():
-                active_city = cities[city]
+            city.update_select(False)
+            city.handle_event(event)
+            if city.rtn_active():
+                active_city = city
 
         active_player = ''
         for player in players:
@@ -222,13 +229,16 @@ while game_on:
 
         # ----------------------------------- using ok bottom click as moving marker to next step
         OK_bottom.handle_event(event)
+        if OK_bottom.rtn_click():
+            for city in cities.values():
+                city.is_shake = False
         # ------------------------------------ using use bottom click to see if want to use special card
         USE_bottom.set_select(False)
         if active_player_card:
-            if active_player_card.type == 'special':
+            if active_player_card.type == 'special' and \
+                    not check_if_process('expose_infection') and not check_if_process('normal_infection'):
                 # active USE_bottom
                 USE_bottom.set_select(True)
-                USE_bottom.display(screen)
                 # keep track if USE click
                 USE_bottom.handle_event(event)
 
@@ -280,40 +290,48 @@ while game_on:
         # action phase is over, start player get card phase, setup the associated paramatar ---- after sweach player, reset action used
         if cur_player.action_used == cur_player.action:
             game_control['player_round'].action['is_player_round_phase'][0] = False
-            assign_next_step(game_control, 'player_draw')
+            assign_next_step(game_control, 'normal_infection',OK_bottom)
 
     ## player get card phase
     # player get card
     cur_player_card_temp = player_get_card(OK_bottom,
                                            cur_player, player_card, player_card_active, cur_player_card, tips,
-                                           game_control, cur_step='player_draw', next_step='player_round')
+                                           game_control, cur_step='player_draw', next_step='normal_infection')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
 
-    # ----------------------------------------------------------if this player card is an expose card...
+    # ----------------------------------------------------------if this player card is an epidemic card...
     if cur_player_card:
-        if cur_player_card.name == 'expose':
+        if cur_player_card.name == 'epidemic':
             # put the card to discard
             cur_player_card.update_pos(x=player_card_img_pos[0] + player_card_size[0] + 15,
                                        y=player_card_img_pos[1])
             player_card_discard.append(cur_player_card)
-            expose_time += 1
+
             cur_player_card = ''
 
             # add the cur task to suspended, and assign to expose_infection
             suspended_task = assign_next_step(game_control, 'expose_infection', OK_bottom)
 
-    cur_infection_card_temp = helper_infect_city(OK_bottom,
-                                                 cities, disease, infection_card, infection_discard,
-                                                 cur_infection_card,
-                                                 disease_cube_summary, tips,
-                                                 game_control, 'expose_infection', suspended_task,
-                                                 'Press OK to start expose!')
-    if cur_infection_card_temp:
-        if cur_infection_card_temp != 'done':
-            cur_infection_card = cur_infection_card_temp
-        else:
-            cur_infection_card = ''
+    # check if expose_infection phase
+    if check_if_process(game_control, 'expose_infection'):
+        cur_infection_card_temp = helper_infect_city(OK_bottom,
+                                                     cities, disease, infection_card, infection_discard,
+                                                     cur_infection_card,
+                                                     disease_cube_summary, tips,
+                                                     game_control, 'expose_infection', suspended_task,
+                                                     'Press OK to start epidemic!')
+        if cur_infection_card_temp:
+            if isinstance(cur_infection_card_temp, int) or cur_infection_card_temp == 'done':
+                cur_infection_card = ''
+                infect_rate += 1
+                game_control['normal_infection'].paramater['rep'] += 1
+                game_control['normal_infection'].paramater['rep_reset'] += 1
+                # add the expose time
+                if isinstance(cur_infection_card_temp, int):
+                    expose_time += cur_infection_card_temp
+            else:
+                cur_infection_card = cur_infection_card_temp
 
     # if this  player has too many card
     if len(cur_player.hand) <= cur_player.handlimit:
@@ -344,8 +362,12 @@ while game_on:
                                           disease_cube_summary, tips,
                                           game_control)
 
-    if cur_infection_card_temp:
-        cur_infection_card = cur_infection_card_temp
+    if isinstance(cur_infection_card_temp, int):
+        expose_time += cur_infection_card_temp
+    else:
+        if cur_infection_card_temp:
+            cur_infection_card = cur_infection_card_temp
+
 
     ##--------------------------------------------------------------------------------------------  start a new round
 

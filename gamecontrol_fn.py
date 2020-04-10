@@ -104,7 +104,7 @@ def initial_infection_card(cities):
     for city in cities:
         card = InfectionCard(cities[city])
         infection_card.append(card)
-    random.shuffle(infection_card)
+    random.shuffle(infection_card)  #------------------------------------------------ testing
 
     #
     infection_card_img = ImgBox(x=infection_card_img_pos[0], y=infection_card_img_pos[1],
@@ -178,14 +178,6 @@ def initial_player_card(cities):
         card.update_color(GREEN)
         player_card.append(card)
     '''
-    # expose card
-    card = SpPlayerCard('expose')
-    card.add_discribe(['Expose time +1',
-                       'draw infection card and infect the city',
-                       'shuffle the discard infection pile and add back to infection pile'])
-    card.update_color((0, 155, 0))
-    card.expose()
-    player_card.append(card)  # ----------------------------------------------------------------------------
 
     player_card_img = ImgBox(x=player_card_img_pos[0], y=player_card_img_pos[1],
                              w=player_card_size[0], h=player_card_size[1], thick=5, color=RED)
@@ -197,6 +189,15 @@ def initial_player_card(cities):
     player_card_discard.update_color(SHADOW)
 
     return player_card, player_card_img, player_card_discard
+
+def epidemic_card():
+    card = SpPlayerCard('epidemic')
+    card.add_discribe(['Infection Rate +1',
+                       'draw infection card and infect the city',
+                       'shuffle the discard infection pile and add back to infection pile'])
+    card.update_color((0, 155, 0))
+    card.epidemic()
+    return card
 
 
 def initial_tip():
@@ -243,12 +244,19 @@ def initial_game_control():
 ################################
 #  process
 ################################
+def check_if_process(game_control, process):
+    rtn = False
+    for val in game_control[process].action.values():
+        for v in val:
+            if v:
+                rtn = True
+    return rtn
+
 
 def assign_next_step(game_control, step_name, OK_bottom):
     # check if any phase is ongoing, if yes, need to return to mark as suspended
     suspended_task = ''
     for val in game_control.values():
-
         for v in val.action.values():
             if v[0]:
                 suspended_task = val.id
@@ -347,10 +355,12 @@ def helper_infect_city(OK_bottom,
         if control.action['is_infection_phase'][0]:
             control.action['is_infection_phase'][0] = False
             control.action['is_infection_phase'][1] = True
+            OK_bottom.unclick()
             return
         if control.action['is_infect_city'][0]:
             control.action['is_infect_city'][0] = False
             control.action['is_infect_city'][1] = True
+            OK_bottom.unclick()
             return
 
     # update tip
@@ -374,21 +384,35 @@ def helper_infect_city(OK_bottom,
 
     # infection city
     if control.action['is_infect_city'][1] and cur_infection_card:
+        OK_bottom.unclick()
         control_tip_update(tips, 'Press OK to continue')
 
         # update cur_infection_card's pos
-        cur_infection_card.update_pos(x=infection_card_img_pos[0] + infection_card_size[0] + 15,
-                                      y=infection_card_img_pos[1])
+        cur_infection_card.set_discard_pos()
 
         infection_discard.append(cur_infection_card)
         city_name = infection_discard[-1].name
         for i in range(control.paramater['dis_num']):
-            cities[city_name].infect(cities[city_name].ctcolor, disease[cities[city_name].ctcolor].pop())
             cities[city_name].update_active(True)
 
-        # update dis_cube_num
-        #   cur_num = disease_cube_summary[cities[city_name].ctcolor].num
-        disease_cube_summary[cities[city_name].ctcolor].add_num(-1 * control.paramater['dis_num'])
+            cur_dis_type = cities[city_name].ctcolor
+            que = [cities[city_name]]
+            memo = []
+
+            while que:
+                city = que.pop()
+                if not city.is_explose(cur_dis_type):
+                    city.infect(cur_dis_type, disease[cur_dis_type].pop())
+                    # update dis_cube_num
+                    disease_cube_summary[cur_dis_type].add_num(-1)
+                else:
+                    city.is_shake = True
+                    memo.append(city)
+                    for link_city in city.city_link:
+                        if link_city not in memo or link_city not in que:
+                            que.append(link_city)
+            if memo:
+                break
 
         control.action['is_infect_city'][1] = False
 
@@ -412,10 +436,19 @@ def helper_infect_city(OK_bottom,
             # if this is the expose_infection, shuffle the infection discard and add back
             if cur_step == 'expose_infection':
                 random.shuffle(infection_discard)
-                infection_card.extend(infection_discard)
-                infection_discard.clear()
-                return 'done'
+                while infection_discard:
+                    card = infection_discard.pop()
+                    card.set_cur_pos()
+                    infection_card.append(card)
+                if memo:
+                    return len(memo)
+                else:
+                    return 'done'
 
+        if memo:
+            return len(memo)
+        else:
+            return
 
 
 
@@ -431,9 +464,10 @@ def infect_city(OK_bottom,
                                                      cur_infection_card,
                                                      disease_cube_summary, tips,
                                                      game_control, cur_step, next_step, tip_text)
+
+
         if cur_infection_card_temp:
-            if cur_infection_card_temp != 'done':
-                return cur_infection_card_temp
+            return cur_infection_card_temp
 
 
 # player action confirm

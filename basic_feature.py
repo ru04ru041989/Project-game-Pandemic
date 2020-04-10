@@ -1,6 +1,7 @@
 import os
 import string
 import pygame as pg
+import random
 
 from paramater import *
 
@@ -152,6 +153,7 @@ class SelectBox():
 class ImgBox(SelectBox):
     def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, thick=2, keep_active=True, to_drag=False):
         super().__init__(x=x, y=y, w=w, h=h, color=color, thick=thick, keep_active=keep_active, to_drag=to_drag)
+        self.is_shake = False
 
     def add_img(self, filename, size, as_rect=True, to_center=True):
         # image
@@ -180,8 +182,15 @@ class ImgBox(SelectBox):
                 self.rect = self.image.get_rect(topleft=(self.x, self.y))
 
     def display(self, screen, select=False, is_rect=True):
+        if self.is_shake:
+            temp_rect = pg.Rect(self.rect.x + random.randint(-9,9), self.rect.y+ random.randint(-9,9),
+                                self.rect.w, self.rect.h)
+        else:
+            temp_rect = self.rect
+
         if self.as_rect:
-            screen.blit(self.image, self.rect)
+            screen.blit(self.image, temp_rect)
+            #screen.blit(self.image, self.rect)
         else:
             image_rect = self.image.get_rect(center=self.rect.center)
             screen.blit(self.image, image_rect)
@@ -189,6 +198,9 @@ class ImgBox(SelectBox):
         if self.active or self.select:
             if is_rect:
                 pg.draw.rect(screen, self.color, self.rect, self.thick)
+
+
+
 
 
 class WordBox(SelectBox):

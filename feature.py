@@ -38,6 +38,9 @@ class City(ImgBox):
     def infect(self, dis_color, dis):
         self.disease[dis_color].append(dis)
 
+    def is_explose(self, dis_color):
+        return len(self.disease[dis_color]) >= 3
+
     def treat(self, dis_color):
         if self.disease[dis_color]:
             return self.disease[dis_color].pop()
@@ -122,8 +125,17 @@ class InfectionCard():
         area_text.add_text(text=city.txt, size=16, color=BLACK)
 
         self.name = city.txt
-
         self.area_text = area_text
+
+    def set_cur_pos(self):
+        x = infection_card_img_pos[0] + infection_card_size[0] * 0.2
+        y = infection_card_img_pos[1] + infection_card_size[0] * 0.2
+        self.update_pos(x,y)
+
+    def set_discard_pos(self):
+        x = infection_card_img_pos[0] + infection_card_size[0] + 15
+        y = infection_card_img_pos[1]
+        self.update_pos(x, y)
 
     def update_pos(self, x, y):
         self.area.update_pos(x, y)
@@ -250,8 +262,8 @@ class SpPlayerCard(PlayerCard):
         self.color = color
         self.area.update_color(color)
 
-    def expose(self):
-        self.type = 'expose'
+    def epidemic(self):
+        self.type = 'epidemic'
 
 # ----------------------------------------------------------------------------------
 class DiseaseSummary():
