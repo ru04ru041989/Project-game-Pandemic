@@ -91,7 +91,7 @@ sp_player_card = {
     'lift': ['move a player to any city'],
     'peaceful night': ['skip the infection city phase'],
     'predict the future': ['see the top 6 infection cards',
-                           'reorder the those 6 cards'],
+                           'reorder those 6 cards'],
     'funding': ['build a lab at any city without the city card'],
     'immune population': ['remove a infection card for the infection discard pile']
 }
@@ -116,8 +116,8 @@ infect_action = {
 # cur_next phase for different infection stage
 cur_next_ls = [['initial_infection1', 'initial_infection2', 'Press OK to set up 1st initial infection'],
                ['initial_infection2', 'initial_infection3', 'Press OK to set up 2nd initial infection'],
-               ['initial_infection3', 'player_draw', 'Press OK to set up 3rd initial infection'],
-               ['normal_infection', 'player_draw', 'Press OK to draw infection card']]
+               ['initial_infection3', 'player_round', 'Press OK to set up 3rd initial infection'],
+               ['normal_infection', 'player_round', 'Press OK to draw infection card']]
 
 
 # ------------------------------------------------------------debug, start from player_draw
@@ -131,9 +131,11 @@ player_draw = {
 }
 
 player_round = {
-    'action': {
-        'is_player_round_phase': [False, False]
-    }
+    'action': False
+}
+
+check_player = {
+    'action': False
 }
 
 

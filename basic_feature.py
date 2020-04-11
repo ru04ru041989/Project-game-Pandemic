@@ -57,6 +57,9 @@ class SelectBox():
         self.offset_x = 0
         self.offset_y = 0
 
+    def unclick(self):
+        self.click = False
+
     def update_method(self, method):
         self.keep_active = method
 
@@ -183,14 +186,14 @@ class ImgBox(SelectBox):
 
     def display(self, screen, select=False, is_rect=True):
         if self.is_shake:
-            temp_rect = pg.Rect(self.rect.x + random.randint(-9,9), self.rect.y+ random.randint(-9,9),
+            temp_rect = pg.Rect(self.rect.x + random.randint(-9, 9), self.rect.y + random.randint(-9, 9),
                                 self.rect.w, self.rect.h)
         else:
             temp_rect = self.rect
 
         if self.as_rect:
             screen.blit(self.image, temp_rect)
-            #screen.blit(self.image, self.rect)
+            # screen.blit(self.image, self.rect)
         else:
             image_rect = self.image.get_rect(center=self.rect.center)
             screen.blit(self.image, image_rect)
@@ -198,9 +201,6 @@ class ImgBox(SelectBox):
         if self.active or self.select:
             if is_rect:
                 pg.draw.rect(screen, self.color, self.rect, self.thick)
-
-
-
 
 
 class WordBox(SelectBox):
@@ -357,11 +357,16 @@ class Link():
 
 class SelectBoard():
     def __init__(self, x=player_control_board_pos[0], y=player_control_board_pos[1],
-                 w=player_control_board_size[0], h=player_control_board_size[1]):
-        self.to_drag = True
+                 w=player_control_board_size[0], h=player_control_board_size[1],
+                 item_w=list_board_item_size[0], item_h=list_board_item_size[1],
+                 to_drag=False, show_summary=True, default_select=False):
+        self.to_drag = to_drag
         self.drag = False
         self.offset_x = 0
         self.offset_y = 0
+
+        self.show_summary = show_summary
+        self.default_select = default_select
 
         # background rect
         self.x = x
@@ -370,8 +375,8 @@ class SelectBoard():
         self.h = h
         self.rect = pg.Rect(self.x, self.y, self.w, self.h)
 
-        self.item_w = list_board_item_size[0]
-        self.item_h = list_board_item_size[1]
+        self.item_w = item_w
+        self.item_h = item_h
 
         self.row_limit = 4
 
@@ -387,7 +392,7 @@ class SelectBoard():
         self.subboard_text = []
 
         # summary board
-        summary_text = InfoBox(x=self.x + self.w * 0.6,
+        summary_text = InfoBox(x=self.x + self.w - self.item_w * 1.2,
                                y=self.y,
                                w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
         summary_text.add_body(body=[' '], size=20, color=BLACK,
@@ -443,7 +448,7 @@ class SelectBoard():
         self.clear.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
                               y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
         self.clear_text.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
-                              y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
+                                   y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
 
         self.summary_text.update_pos(x=self.x + self.w * 0.6, y=self.y)
 
@@ -465,6 +470,9 @@ class SelectBoard():
         self.subboard_title.add_text(text=title, size=16, color=BLACK, to_center=False)
         self.title = title
 
+    def update_default_select(self, default_select):
+        self.default_select = default_select
+
     def rtn_ls_content(self):
         return self.list_content
 
@@ -472,7 +480,7 @@ class SelectBoard():
         self.subboard_area = []
         self.subboard_text = []
         self.cur_mult_choose = set()
-        self.cur_uni_choose = -1
+        self.cur_uni_choose = 0 if self.default_select else -1
         self.cur_is_mult = False
         self.has_active = False
 
@@ -489,8 +497,8 @@ class SelectBoard():
             box = SelectBox(x=self.x + self.item_w * x_adj + 10,
                             y=self.y + self.item_h * y_adj + 5,
                             w=self.item_w, h=self.item_h, keep_active=False)
-            box_text = WordBox(x=self.x + self.item_w * x_adj+ 10,
-                               y=self.y + self.item_h * y_adj+ 5,
+            box_text = WordBox(x=self.x + self.item_w * x_adj + 10,
+                               y=self.y + self.item_h * y_adj + 5,
                                w=self.item_w, h=self.item_h, keep_active=False, as_rect=False)
             box.update_color(ls_color[i])
             box.update_method(keep_active)
@@ -499,7 +507,7 @@ class SelectBoard():
             self.subboard_area.append(box)
             self.subboard_text.append(box_text)
 
-    def handel_event(self, event):
+    def handle_event(self, event):
         cur_active = []
         if self.subboard_area:
             for i, box in enumerate(self.subboard_area):
@@ -519,9 +527,9 @@ class SelectBoard():
                 for act in cur_active:
                     self.cur_mult_choose.add(act)
 
-        self.bottom.handle_event(event)
-
-        self.clear.handle_event(event)
+        if self.show_summary:
+            self.bottom.handle_event(event)
+            self.clear.handle_event(event)
 
         if self.clear.active:
             self.cur_mult_choose = set()
@@ -543,7 +551,6 @@ class SelectBoard():
             # for dragging
             if event.button == 1 and self.to_drag:
                 self.drag = False
-
         elif event.type == pg.MOUSEMOTION:
             # for dragging
             if self.drag:
@@ -565,12 +572,13 @@ class SelectBoard():
                 return [self.subboard_text[i].org_text for i in self.cur_mult_choose]
         else:
             # check if get activate
-            if self.has_active:
+            if self.cur_uni_choose >= 0:
                 return self.subboard_text[self.cur_uni_choose].org_text
 
-    def display(self, screen):
+    def display(self, screen, draw_bg=True):
         # bg rect (white bg)
-        pg.draw.rect(screen, WHITE, self.rect, 0)
+        if draw_bg:
+            pg.draw.rect(screen, WHITE, self.rect, 0)
 
         # title
         if self.title:
@@ -590,21 +598,22 @@ class SelectBoard():
         for box in self.subboard_text:
             box.display(screen)
 
-        # bottom
-        self.bottom.display(screen)
-        self.bottom_text.display(screen)
-        self.clear.display(screen)
-        self.clear_text.display(screen)
+        if self.show_summary:
+            # bottom
+            self.bottom.display(screen)
+            self.bottom_text.display(screen)
+            self.clear.display(screen)
+            self.clear_text.display(screen)
 
-        # summary
-        summary = ['']
-        if self.cur_is_mult:
-            summary = [self.subboard_text[i].org_text for i in self.cur_mult_choose]
-        else:
-            if self.cur_uni_choose != -1:
-                summary = self.subboard_text[self.cur_uni_choose].org_text
-        self.update_summary(summary)
-        self.summary_text.display(screen, draw_rect=False)
+            # summary
+            summary = ['']
+            if self.cur_is_mult:
+                summary = [self.subboard_text[i].org_text for i in self.cur_mult_choose]
+            else:
+                if self.cur_uni_choose != -1:
+                    summary = self.subboard_text[self.cur_uni_choose].org_text
+            self.update_summary(summary)
+            self.summary_text.display(screen, draw_rect=False)
 
 
 class InteractBoard():

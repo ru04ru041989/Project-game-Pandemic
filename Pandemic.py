@@ -71,15 +71,12 @@ USE_bottom = ControlBottom('USE', USE_bottom_pos, USE_bottom_size)
 # -----------------------------------------------------------------  interact board
 # player board
 player_board = PlayerBoard()
-player_subboard1 = subboard(1)
-player_subboard2 = subboard(2)
-player_board_summary = PlayerBoardSummary()
-player_board_key = ''
+player_board.add_player_color(players[3 % 5].color)
 
 ## special case control
 # hand card over limit
 is_hand_over_limit = False
-hand_over_limit = SelectBoard(w=player_control_board_size[0]/2)
+hand_over_limit = SelectBoard(w=player_control_board_size[0] / 2, to_drag=True)
 hand_over_limit.add_title('Holding too many cards, discard one')
 
 #####################
@@ -90,14 +87,16 @@ hand_over_limit.add_title('Holding too many cards, discard one')
 game_control = initial_game_control()
 
 # first event = initial_infection1---------------------------debug mode, start at normal infection
-suspended_task = assign_next_step(game_control, 'normal_infection', OK_bottom)
-cur_player = players[1]
+suspended_task = assign_next_step(game_control, 'player_round', OK_bottom)
+total_player = 5  # -----------------------------------------------------------------this should be set in advance
+cur_playNO = 0
 
 pnt_game_control(game_control, suspended_task)
-#------------------------------------------------------------------------  testing new item
-test = SelectBoard()
-test.add_title('testing selectboard sjeialjasidjfilasdjfleij')
-test.add_ls(['a', 'b', 'c', 'd', 'e', 'f', 'g'], keep_active=True)
+# ------------------------------------------------------------------------  testing new item
+
+
+
+
 
 ######################################################
 ######################################################
@@ -107,6 +106,8 @@ clock = pg.time.Clock()
 
 game_on = True
 while game_on:
+
+    cur_player = players[cur_playNO % 5]
 
     screen.fill(bg_color)
     WorldMap.display(screen)
@@ -168,9 +169,9 @@ while game_on:
         tips[tip].display(screen)
 
     # player board
-    player_round_display(screen, game_control['player_round'].rtn_action_active()[0],
-                         player_board, player_board_summary,
-                         player_subboard1, player_subboard2)
+    if game_control['player_round'].rtn_action_active():
+        player_board.add_player_color(cur_player.color)
+        player_board.display(screen)
 
     # game control
 
@@ -222,10 +223,10 @@ while game_on:
             if card.rtn_active():
                 active_player_card = card
 
-        # associated with board (which board display, which board collect event)
-        player_round_handel_event(event, game_control['player_round'].rtn_action_active()[0],
-                                  player_board, player_board_summary,
-                                  player_subboard1, player_subboard2)
+        # player_board
+        if game_control['player_round'].rtn_action_active():
+            player_board.update_city_pick(players, cur_player, active_city, cities)
+            player_board.handle_event(event, players, cur_player, active_city, cities)
 
         # ----------------------------------- using ok bottom click as moving marker to next step
         OK_bottom.handle_event(event)
@@ -246,61 +247,147 @@ while game_on:
 
         # player has too many cards
         if is_hand_over_limit:
-            hand_over_limit.handel_event(event)
+            hand_over_limit.handle_event(event)
 
     # ---------------------------------------------------------------------------------
 
+
     # ---------------------------------------------------------------------------------
 
+    ####################################################################################
     ### after event
 
-    ## player's action
-    if game_control['player_round'].action['is_player_round_phase'][0]:
-        # update player control board ---------------------------------------------------------debug
-        player_board_key = player_subboard_update(player_board, player_subboard1, player_subboard2,
-                                                  player_board_summary,
-                                                  players, cur_player, player_board_key,
-                                                  active_city, cities, labs)
+    #############################################     ## player's action
+    if game_control['player_round'].rtn_action_active():
+        tip_text = 'Player ' + str((cur_playNO % total_player) +1) + ': ' + cur_player.name + "'s round"
+        control_tip_update(tips, tip_text)
+
         # player click on confirm
-        if player_board_summary.rtn_active():
-            action, target = player_action_confirm(players, cur_player, labs, cities,
-                                                   player_board, player_subboard1, player_subboard2,
-                                                   player_board_summary)
+        if player_board.rtn_active():
+            action, subboard = player_board.rtn_status()
+            player_board.bottom.unclick()
+
             if action == 'Move':
-                move(cur_player, target[0], target[1], target[2],
-                     player_card_active, player_card_discard)
+                target_city = player_board.city_pick
+                if target_city:
+                    # figure which player to move
+                    if not cur_player.move_other:
+                        ppl = cur_player
+                    else:
+                        ppl = cur_player
+                        if subboard:
+                            player_move = subboard.pop(0)
+                            for player in players:
+                                if player.name == player_move:
+                                    ppl = player
 
-            if action == 'Share':
-                share(cur_player, target[0], target[1])
+                    # figure if need card, and which player choose if there is multi card can be used
+                    if target_city in ppl.city.city_link:
+                        move(cur_player, ppl, target_city, '',
+                             player_card_active, player_card_discard)
+                    elif target_city.lab and ppl.city.lab:
+                        move(cur_player, ppl, target_city, '',
+                             player_card_active, player_card_discard)
+                    elif cur_player.move_other and target_city in [player.city for player in players]:
+                        move(cur_player, ppl, target_city, '',
+                             player_card_active, player_card_discard)
+                    else:
+                        if subboard:
+                            card_need = subboard.pop(0)
+                            for card in cur_player.hand:
+                                if card.name == card_need:
+                                    move(cur_player, ppl, target_city, card,
+                                         player_card_active, player_card_discard)
+                else:
+                    summary_text = ['Please choose city to move']
 
-            if action == 'Cure':
-                discover_cure(cur_player, target, is_cure, find_cure, player_card_active, player_card_discard)
+            if action == 'Build Lab':
+                if cur_player.city.lab:
+                    summary_text = ['City has lab already']
+                else:
+                    if labs:
+                        if cur_player.building_action:
+                            build(cur_player, '', '', labs, player_card_active, player_card_discard)
+                        else:
+                            for card in cur_player.hand:
+                                if card.name == cur_player.city.txt:
+                                    build(cur_player, card, '', labs, player_card_active, player_card_discard)
+                    else:
+                        if subboard:
+                            for city in cities:
+                                if city.txt == subboard.pop():
+                                    rp_lab = city
+                            if cur_player.building_action:
+                                build(cur_player, '', rp_lab, labs, player_card_active, player_card_discard)
+                            else:
+                                for card in cur_player.hand:
+                                    if card.name == cur_player.city.txt:
+                                        build(cur_player, card, rp_lab, labs, player_card_active, player_card_discard)
 
-            if action == 'Build':
-                build(cur_player, target[0], target[1], labs, player_card_active, player_card_discard)
+            if action == 'Find Cure':
+                summary_text = ['Not enough city card',
+                                'Need ' + str(cur_player.cure_need) + ' same color cards']
+                if not cur_player.city.lab:
+                    summary_text = ['This City has no lab']
+                else:
+                    if subboard:
+                        board = subboard.pop(0)
+                        board = board if isinstance(board, list) else [board]
+                        if len(board) >= cur_player.cure_need:
+                            card_to_use = []
+                            for card in cur_player.hand:
+                                if card.name in board:
+                                    card_to_use.append(card)
+                            discover_cure(cur_player, card_to_use, is_cure, find_cure, player_card_active,
+                                          player_card_discard)
 
-            if action == 'Treat':
-                treat(cur_player, target, disease, is_cure, disease_cube_summary)
+            if action == 'Treat disease':
+                treat_ls = [k for k, v in cur_player.city.disease.items() if len(v) != 0]
+                if not len(treat_ls):
+                    summary_text = ['City has no disease',
+                                    'Please choose another action']
+                else:
+                    if len(treat_ls) == 1:
+                        treat(cur_player, treat_ls[0], disease, is_cure, disease_cube_summary)
+                    elif subboard:
+                        treat(cur_player, subboard.pop(0), disease_cube_summary)
+                    else:
+                        summary_text = ['City has more than one disease',
+                                        'Please choose which one to treat']
 
-            player_subboard_update(player_board, player_subboard1, player_subboard2,
-                                   player_board_summary,
-                                   players, cur_player, player_board_key, active_city, cities, labs,
-                                   force_update=True)
+            if action == 'Share info':
+                board1 = subboard.pop(0) if subboard else None
+                board2 = subboard.pop(0) if subboard else None
+                if board1 and board2:
+                    for player in players:
+                        if player.name == board1:
+                            player_trade = player
+                    for card in cur_player.hand:
+                        if card.name == board2:
+                            card_trade = card
+                    share(cur_player, player_trade, card_trade)
+                else:
+                    summary_text = ['Make sure you finish choosing', 'before click confirm']
 
-        # action phase is over, start player get card phase, setup the associated paramatar ---- after sweach player, reset action used
+            player_board.get_subboard(action, players, cur_player, player_board.city_pick, cities)
+
+
+        # player use up all the action: action phase is over, start player get card phase
         if cur_player.action_used == cur_player.action:
-            game_control['player_round'].action['is_player_round_phase'][0] = False
-            assign_next_step(game_control, 'normal_infection',OK_bottom)
+            game_control['player_round'].action = False
+            assign_next_step(game_control, 'player_draw', OK_bottom)
 
-    ## player get card phase
+
+
+    ############################################      ## player get card phase
     # player get card
     cur_player_card_temp = player_get_card(OK_bottom,
                                            cur_player, player_card, player_card_active, cur_player_card, tips,
-                                           game_control, cur_step='player_draw', next_step='normal_infection')
+                                           game_control, cur_step='player_draw', next_step='check_player')
     if cur_player_card_temp:
         cur_player_card = cur_player_card_temp
 
-    # ----------------------------------------------------------if this player card is an epidemic card...
+    # ------------------------------------------------if this player card is an epidemic card...
     if cur_player_card:
         if cur_player_card.name == 'epidemic':
             # put the card to discard
@@ -333,13 +420,11 @@ while game_on:
             else:
                 cur_infection_card = cur_infection_card_temp
 
-    # if this  player has too many card
+    # ------------------------------------------------if this  player has too many card
     if len(cur_player.hand) <= cur_player.handlimit:
         is_hand_over_limit = False
-        turn_OK_on(OK_bottom)
-
     else:
-        turn_OK_off(OK_bottom)
+        OK_bottom.turn_off()
         control_tip_update(tips, 'Discard one card to continue')
         # display another interaction board and select one card to discard
         is_hand_over_limit = True
@@ -354,6 +439,13 @@ while game_on:
                 card = card_pick[0]
                 discard_card(cur_player, card, player_card_active, player_card_discard)
 
+    #############################################      ## check cur player round
+    if game_control['check_player'].rtn_action_active():
+        cur_player.action_used = 0
+        cur_playNO += 1
+        assign_next_step(game_control, 'normal_infection', OK_bottom)
+        game_control['check_player'].action = False
+
     ##------------------------------------------------------------------------------------------------------
     ## infection phase
     cur_infection_card_temp = infect_city(OK_bottom,
@@ -367,7 +459,6 @@ while game_on:
     else:
         if cur_infection_card_temp:
             cur_infection_card = cur_infection_card_temp
-
 
     ##--------------------------------------------------------------------------------------------  start a new round
 
