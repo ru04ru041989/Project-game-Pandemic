@@ -104,7 +104,7 @@ def initial_infection_card(cities):
     for city in cities:
         card = InfectionCard(cities[city])
         infection_card.append(card)
-    random.shuffle(infection_card)  #------------------------------------------------ testing
+    random.shuffle(infection_card)  # ------------------------------------------------ testing
 
     #
     infection_card_img = ImgBox(x=infection_card_img_pos[0], y=infection_card_img_pos[1],
@@ -139,6 +139,28 @@ def initial_indicater(infect_rate, expose_time, labs):
     expose_time_text.update_pos(x=infection_card_img_pos[0] + infection_card_size[0] * 0.5,
                                 y=infection_card_img_pos[1] - city_size[1] * 2)
     return lab_indicater, infection_rate_text, expose_time_text
+
+
+def initial_game_board():
+    display_board = {}
+
+    # infection discard board
+    infection_discard_borad = DisplayBoard(x=player_control_board_pos[0] + 50, y=player_control_board_pos[1] - 100,
+                                           w=player_control_board_size[0] - 100, h=player_control_board_size[1] + 100,
+                                           to_drag=True, show_summary=False)
+    infection_discard_borad.add_title('Infection Discard')
+    display_board['infection_discard'] = infection_discard_borad
+
+    # player board
+    player_board = PlayerBoard()
+    display_board['player'] = player_board
+
+    # hand over limit
+    hand_over_limit = SelectBoard(w=player_control_board_size[0] / 2, to_drag=True)
+    hand_over_limit.add_title('Holding too many cards, discard one')
+    display_board['hand_limit'] = hand_over_limit
+
+    return display_board
 
 
 def initial_player(cities):  # -----------------------------------------debug  start at taipei
@@ -233,17 +255,30 @@ def initial_game_control():
     control.add_action(player_draw['action'])
     game_control['player_draw'] = control
 
+    # single action
     # player_round
     control = GameControl()
     control.add_id('player_round')
-    control.add_action(player_round['action'])
+    control.add_action(False)
     game_control['player_round'] = control
 
     # check_player
     control = GameControl()
     control.add_id('check_player')
-    control.add_action(check_player['action'])
+    control.add_action(False)
     game_control['check_player'] = control
+
+    # hand_limit
+    control = GameControl()
+    control.add_id('hand_limit')
+    control.add_action(False)
+    game_control['hand_limit'] = control
+
+    # infection_discard_view
+    control = GameControl()
+    control.add_id('infection_discard_view')
+    control.add_action(False)
+    game_control['infection_discard_view'] = control
 
     return game_control
 
@@ -252,12 +287,14 @@ def initial_game_control():
 #  process
 ################################
 def check_if_process(game_control, process):
-    rtn = False
-    for val in game_control[process].action.values():
-        for v in val:
-            if v:
-                rtn = True
-    return rtn
+    if isinstance(game_control[process].action, dict):
+        for val in game_control[process].action.values():
+            for v in val:
+                if v:
+                    return True
+        return False
+    else:
+        return game_control[process].action
 
 
 def assign_next_step(game_control, step_name, OK_bottom):
@@ -269,13 +306,16 @@ def assign_next_step(game_control, step_name, OK_bottom):
                 if v[0]:
                     suspended_task = val.id
                     v[0] = False
+        else:
+            if val.action:
+                val.action = False
+                suspended_task = val.id
 
     if not isinstance(game_control[step_name].action, bool):
         key = list(game_control[step_name].action)[0]
         game_control[step_name].action[key][0] = True
     else:
         game_control[step_name].action = True
-
 
     if step_name == 'player_round':
         OK_bottom.turn_off()
@@ -460,7 +500,6 @@ def helper_infect_city(OK_bottom,
             return
 
 
-
 def infect_city(OK_bottom,
                 cities, disease, infection_card, infection_discard, cur_infection_card,
                 disease_cube_summary, tips,
@@ -526,7 +565,7 @@ def treat(cur_player, disease_color, disease, is_cure, disease_cube_summary):
         disease[disease_color].append(dis)
         disease_cube_summary[disease_color].add_num(1)
 
-    if is_cure[disease_color]:
+    if is_cure[disease_color] or cur_player.supertreat:
         for i in range(3):
             dis = cur_player.city.treat(disease_color)
             if dis:
@@ -538,6 +577,20 @@ def share(cur_player, target_player, card):
     cur_player.hand.remove(card)
     target_player.hand.append(card)
     cur_player.action_used += 1
+
+
+### display board control
+# choose one board to display, keep track if on hold of player board
+def game_board_chosen(item, display_board):
+    for board in display_board:
+        if board == item:
+            display_board[board].is_close = False
+        else:
+            display_board[board].is_close = True
+
+
+
+
 
 
 ################################
@@ -597,10 +650,9 @@ def control_tip_update(tips, body):
 
 
 # hightlight city
-def hightlight_city(cities, rtn_infection_card, rtn_player_card, cur_infection_city):
+def hightlight_city(cities, hightlight_ls):
     for city in cities:
-        if cities[city].txt == rtn_infection_card or cities[city].txt == rtn_player_card or \
-                cities[city].txt == cur_infection_city:
+        if cities[city].txt in hightlight_ls:
             cities[city].update_active(True)
 
 

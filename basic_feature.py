@@ -6,6 +6,7 @@ import random
 from paramater import *
 
 pg.init()
+dbclock = pg.time.Clock()
 
 
 def content_fit(content, size=1000):
@@ -57,6 +58,9 @@ class SelectBox():
         self.offset_x = 0
         self.offset_y = 0
 
+        self.double_click = False
+        self.click_time = 0
+
     def unclick(self):
         self.click = False
 
@@ -89,6 +93,15 @@ class SelectBox():
 
     def handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
+
+            self.double_click = False
+            if self.rect.collidepoint(event.pos):
+                # for double click
+                now = pg.time.get_ticks()
+                if DOUBLECLICKTIME > now - self.click_time > 50:
+                    self.double_click = True
+                self.click_time = now
+
             # for dragging
             if event.button == 1 and self.to_drag:
                 if self.rect.collidepoint(event.pos):
@@ -428,6 +441,7 @@ class SelectBoard():
         bottom_text.add_text(text='Clear', color=BLACK, size=20, is_cap=False)
         self.clear_text = bottom_text
 
+        self.is_close = True
         # control sys
         self.cur_mult_choose = set()
         self.cur_uni_choose = -1
@@ -508,60 +522,61 @@ class SelectBoard():
             self.subboard_text.append(box_text)
 
     def handle_event(self, event):
-        cur_active = []
-        if self.subboard_area:
-            for i, box in enumerate(self.subboard_area):
-                box.handle_event(event)
-                if box.active:
-                    cur_active.append(i)
-                    self.has_active = True
+        if not self.is_close:
+            cur_active = []
+            if self.subboard_area:
+                for i, box in enumerate(self.subboard_area):
+                    box.handle_event(event)
+                    if box.active:
+                        cur_active.append(i)
+                        self.has_active = True
 
-        # check how many active
-        if cur_active:
-            if len(cur_active) == 1:
-                self.cur_is_mult = False
-                self.cur_uni_choose = cur_active[0]
-            else:
-                self.cur_is_mult = True
+            # check how many active
+            if cur_active:
+                if len(cur_active) == 1:
+                    self.cur_is_mult = False
+                    self.cur_uni_choose = cur_active[0]
+                else:
+                    self.cur_is_mult = True
+                    self.cur_mult_choose = set()
+                    for act in cur_active:
+                        self.cur_mult_choose.add(act)
+
+            if self.show_summary:
+                self.bottom.handle_event(event)
+                self.clear.handle_event(event)
+
+            if self.clear.active:
                 self.cur_mult_choose = set()
-                for act in cur_active:
-                    self.cur_mult_choose.add(act)
+                self.cur_uni_choose = -1
+                for box in self.subboard_area:
+                    box.update_active(False)
+                    box.hit = 0
 
-        if self.show_summary:
-            self.bottom.handle_event(event)
-            self.clear.handle_event(event)
-
-        if self.clear.active:
-            self.cur_mult_choose = set()
-            self.cur_uni_choose = -1
-            for box in self.subboard_area:
-                box.update_active(False)
-                box.hit = 0
-
-        # try drag
-        if event.type == pg.MOUSEBUTTONDOWN:
-            # for dragging
-            if event.button == 1 and self.to_drag:
-                if self.rect.collidepoint(event.pos):
-                    self.drag = True
+            # try drag
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # for dragging
+                if event.button == 1 and self.to_drag:
+                    if self.rect.collidepoint(event.pos):
+                        self.drag = True
+                        mouse_x, mouse_y = event.pos
+                        self.offset_x = self.rect.x - mouse_x
+                        self.offset_y = self.rect.y - mouse_y
+            elif event.type == pg.MOUSEBUTTONUP:
+                # for dragging
+                if event.button == 1 and self.to_drag:
+                    self.drag = False
+            elif event.type == pg.MOUSEMOTION:
+                # for dragging
+                if self.drag:
                     mouse_x, mouse_y = event.pos
-                    self.offset_x = self.rect.x - mouse_x
-                    self.offset_y = self.rect.y - mouse_y
-        elif event.type == pg.MOUSEBUTTONUP:
-            # for dragging
-            if event.button == 1 and self.to_drag:
+                    new_x = mouse_x + self.offset_x
+                    new_y = mouse_y + self.offset_y
+
+                    self.update_pos(new_x, new_y)
+
+            if self.bottom.active:
                 self.drag = False
-        elif event.type == pg.MOUSEMOTION:
-            # for dragging
-            if self.drag:
-                mouse_x, mouse_y = event.pos
-                new_x = mouse_x + self.offset_x
-                new_y = mouse_y + self.offset_y
-
-                self.update_pos(new_x, new_y)
-
-        if self.bottom.active:
-            self.drag = False
 
     def rtn_confirm(self):
         return self.bottom.active
@@ -576,50 +591,338 @@ class SelectBoard():
                 return self.subboard_text[self.cur_uni_choose].org_text
 
     def display(self, screen, draw_bg=True):
-        # bg rect (white bg)
-        if draw_bg:
-            pg.draw.rect(screen, WHITE, self.rect, 0)
+        if not self.is_close:
+            # bg rect (white bg)
+            if draw_bg:
+                pg.draw.rect(screen, WHITE, self.rect, 0)
+
+            # title
+            if self.title:
+                self.subboard_title.display(screen)
+
+            # list
+            for i, box in enumerate(self.subboard_area):
+                box.update_thick()
+                if self.cur_is_mult:
+                    if box.active:
+                        box.update_thick(0)
+                else:
+                    if box.active or i == self.cur_uni_choose:
+                        box.update_thick(0)
+                box.display_no_active(screen)
+
+            for box in self.subboard_text:
+                box.display(screen)
+
+            if self.show_summary:
+                # bottom
+                self.bottom.display(screen)
+                self.bottom_text.display(screen)
+                self.clear.display(screen)
+                self.clear_text.display(screen)
+
+                # summary
+                summary = ['']
+                if self.cur_is_mult:
+                    summary = [self.subboard_text[i].org_text for i in self.cur_mult_choose]
+                else:
+                    if self.cur_uni_choose != -1:
+                        summary = self.subboard_text[self.cur_uni_choose].org_text
+                self.update_summary(summary)
+                self.summary_text.display(screen, draw_rect=False)
+
+
+class DisplayBoard():
+    def __init__(self, x=player_control_board_pos[0], y=player_control_board_pos[1],
+                 w=player_control_board_size[0], h=player_control_board_size[1],
+                 item_w=list_board_item_size[0], item_h=list_board_item_size[1],
+                 to_drag=False, show_summary=True, default_select=False):
+        self.to_drag = to_drag
+        self.drag = False
+        self.offset_x = 0
+        self.offset_y = 0
+
+        self.show_summary = show_summary
+        self.default_select = default_select
+
+        # background rect
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.rect = pg.Rect(self.x, self.y, self.w, self.h)
+
+        self.item_w = item_w
+        self.item_h = item_h
+
+        self.row_limit = 4
+        self.x_shift = 0
 
         # title
-        if self.title:
-            self.subboard_title.display(screen)
+        self.subboard_title = WordBox(x=self.x + 10, y=self.y + 5, w=self.item_w, h=self.item_h, as_rect=False)
+        self.subboard_title.add_text(' ', size=16, color=BLACK, to_center=False)
 
-        # list
-        for i, box in enumerate(self.subboard_area):
-            box.update_thick()
-            if self.cur_is_mult:
-                if box.active:
-                    box.update_thick(0)
+        self.title = ''
+
+        # subboard
+        self.list_content = ''
+        self.subboard_area = []
+        self.subboard_text = []
+
+        # summary board
+        summary_text = InfoBox(x=self.x + self.w - self.item_w * 1.2,
+                               y=self.y,
+                               w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
+        summary_text.add_body(body=[' '], size=20, color=BLACK,
+                              line_space=15, indent=10, fit_size=50, n_col=1)
+        summary_text.add_title('Item choose: ', size=20, color=BLACK)
+        self.summary_text = summary_text
+
+        # confirm bottom
+        bottom = SelectBox(thick=0, keep_active=False)
+        bottom.update_color(SHADOW)
+        bottom.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                          y=self.y + self.h - CONFIRM_bottom_size[1])
+        bottom.update_wh(w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
+        self.bottom = bottom
+
+        bottom_text = WordBox(x=self.x + self.w - CONFIRM_bottom_size[0],
+                              y=self.y + self.h - CONFIRM_bottom_size[1],
+                              w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1], as_rect=False)
+        bottom_text.add_text(text='Confirm', color=BLACK, size=20, is_cap=False)
+        self.bottom_text = bottom_text
+
+        # clear bottom
+        bottom = SelectBox(thick=0, keep_active=False)
+        bottom.update_color(SHADOW)
+        bottom.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                          y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
+        bottom.update_wh(w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
+        self.clear = bottom
+
+        bottom_text = WordBox(x=self.x + self.w - CONFIRM_bottom_size[0],
+                              y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2,
+                              w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1], as_rect=False)
+        bottom_text.add_text(text='Clear', color=BLACK, size=20, is_cap=False)
+        self.clear_text = bottom_text
+
+        # close bottom
+        bottom = SelectBox(thick=0, keep_active=False)
+        bottom.update_color(SHADOW)
+        bottom.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                          y=self.y + self.h - CONFIRM_bottom_size[1])
+        bottom.update_wh(w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
+        self.close = bottom
+
+        bottom_text = WordBox(x=self.x + self.w - CONFIRM_bottom_size[0],
+                              y=self.y + self.h - CONFIRM_bottom_size[1],
+                              w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1], as_rect=False)
+        bottom_text.add_text(text='Close', color=BLACK, size=20, is_cap=False)
+        self.close_text = bottom_text
+
+        self.is_close = True
+
+        # control sys
+        self.cur_mult_choose = set()
+        self.cur_uni_choose = -1
+        self.cur_is_mult = False
+        self.has_active = False
+
+    def update_pos(self, x, y):
+        self.x = x
+        self.y = y
+        self.rect.x = x
+        self.rect.y = y
+
+        self.bottom.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                               y=self.y + self.h - CONFIRM_bottom_size[1])
+        self.bottom_text.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                                    y=self.y + self.h - CONFIRM_bottom_size[1])
+
+        self.clear.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                              y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
+        self.clear_text.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                                   y=self.y + self.h - CONFIRM_bottom_size[1] * 2.2)
+
+        self.close.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                               y=self.y + self.h - CONFIRM_bottom_size[1])
+        self.close_text.update_pos(x=self.x + self.w - CONFIRM_bottom_size[0],
+                                    y=self.y + self.h - CONFIRM_bottom_size[1])
+
+        self.summary_text.update_pos(x=self.x + self.w * 0.6, y=self.y)
+
+        self.subboard_title.update_pos(x=self.x + 10, y=self.y + 5)
+
+        for i in range(len(self.subboard_area)):
+            y_adj = i % self.row_limit + 1
+            x_adj = i//self.row_limit
+            self.subboard_area[i].update_pos(x=self.x + self.item_w * x_adj + self.x_shift * y_adj + 10,
+                                             y=self.y + self.item_h * y_adj + 5)
+            self.subboard_text[i].update_pos(x=self.x + self.item_w * x_adj + self.x_shift * y_adj + 10,
+                                             y=self.y + self.item_h * y_adj + 5)
+
+    def update_summary(self, text):
+        self.summary_text.add_body(body=text, size=20, color=BLACK,
+                                   line_space=20, indent=10, fit_size=50, n_col=1)
+
+    def add_title(self, title):
+        self.subboard_title.add_text(text=title, size=16, color=BLACK, to_center=False)
+        self.title = title
+
+    def update_default_select(self, default_select):
+        self.default_select = default_select
+
+    def rtn_ls_content(self):
+        return self.list_content
+
+    def reset(self):
+        self.subboard_area = []
+        self.subboard_text = []
+        self.cur_mult_choose = set()
+        self.cur_uni_choose = 0 if self.default_select else -1
+        self.cur_is_mult = False
+        self.has_active = False
+
+    def add_ls(self, ls_txt, ls_color='', row_limit=4, keep_active=False, is_seq=False):
+        self.list_content = ls_txt
+        self.reset()
+        self.row_limit = row_limit
+
+        self.x_shift = 10 if is_seq else 0
+
+        if not ls_color:
+            ls_color = [GRAY] * len(ls_txt)
+
+        for i in range(len(ls_txt)):
+            y_adj = i % row_limit + 1
+            x_adj = i//row_limit
+            box = SelectBox(x=self.x + self.item_w * x_adj + self.x_shift * y_adj + 10,
+                            y=self.y + self.item_h * y_adj + 5,
+                            w=self.item_w, h=self.item_h, keep_active=False)
+            box_text = WordBox(x=self.x + self.item_w * x_adj + self.x_shift * y_adj + 10,
+                               y=self.y + self.item_h * y_adj + 5,
+                               w=self.item_w, h=self.item_h, keep_active=False, as_rect=False)
+            box.update_color(ls_color[i])
+            box.update_method(keep_active)
+            box_text.add_text(ls_txt[i], size=16, color=BLACK)
+
+            self.subboard_area.append(box)
+            self.subboard_text.append(box_text)
+
+    def handle_event(self, event):
+        if not self.is_close:
+            cur_active = []
+            if self.subboard_area:
+                for i, box in enumerate(self.subboard_area):
+                    box.handle_event(event)
+                    if box.active:
+                        cur_active.append(i)
+                        self.has_active = True
+
+            # check how many active
+            if cur_active:
+                if len(cur_active) == 1:
+                    self.cur_is_mult = False
+                    self.cur_uni_choose = cur_active[0]
+                else:
+                    self.cur_is_mult = True
+                    self.cur_mult_choose = set()
+                    for act in cur_active:
+                        self.cur_mult_choose.add(act)
+
+            if self.show_summary:
+                self.bottom.handle_event(event)
+                self.clear.handle_event(event)
             else:
-                if box.active or i == self.cur_uni_choose:
-                    box.update_thick(0)
-            box.display_no_active(screen)
+                self.close.handle_event(event)
 
-        for box in self.subboard_text:
-            box.display(screen)
+            if self.clear.active:
+                self.cur_mult_choose = set()
+                self.cur_uni_choose = -1
+                for box in self.subboard_area:
+                    box.update_active(False)
+                    box.hit = 0
 
-        if self.show_summary:
-            # bottom
-            self.bottom.display(screen)
-            self.bottom_text.display(screen)
-            self.clear.display(screen)
-            self.clear_text.display(screen)
+            if self.close.active:
+                self.is_close = True
 
-            # summary
-            summary = ['']
-            if self.cur_is_mult:
-                summary = [self.subboard_text[i].org_text for i in self.cur_mult_choose]
+            # try drag
+            if event.type == pg.MOUSEBUTTONDOWN:
+                # for dragging
+                if event.button == 1 and self.to_drag:
+                    if self.rect.collidepoint(event.pos):
+                        self.drag = True
+                        mouse_x, mouse_y = event.pos
+                        self.offset_x = self.rect.x - mouse_x
+                        self.offset_y = self.rect.y - mouse_y
+            elif event.type == pg.MOUSEBUTTONUP:
+                # for dragging
+                if event.button == 1 and self.to_drag:
+                    self.drag = False
+            elif event.type == pg.MOUSEMOTION:
+                # for dragging
+                if self.drag:
+                    mouse_x, mouse_y = event.pos
+                    new_x = mouse_x + self.offset_x
+                    new_y = mouse_y + self.offset_y
+
+                    self.update_pos(new_x, new_y)
+
+            if self.bottom.active:
+                self.drag = False
+
+    def rtn_confirm(self):
+        return self.bottom.active
+
+    def rtn_select(self):
+        if self.cur_is_mult:
+            if self.cur_mult_choose:
+                return [self.subboard_text[i].org_text for i in self.cur_mult_choose]
+        else:
+            # check if get activate
+            if self.cur_uni_choose >= 0:
+                return self.subboard_text[self.cur_uni_choose].org_text
+
+    def display(self, screen, draw_bg=True):
+        if not self.is_close:
+            # bg rect (white bg)
+            if draw_bg:
+                pg.draw.rect(screen, WHITE, self.rect, 0)
+
+            # title
+            if self.title:
+                self.subboard_title.display(screen)
+
+            # list
+            for i, box in enumerate(self.subboard_area):
+                box.update_thick()
+                if self.cur_is_mult:
+                    if box.active:
+                        box.update_thick(0)
+                else:
+                    if box.active or i == self.cur_uni_choose:
+                        box.update_thick(0)
+                box.display_no_active(screen)
+
+            for box in self.subboard_text:
+                box.display(screen)
+
+            if self.show_summary:
+                # bottom
+                self.bottom.display(screen)
+                self.bottom_text.display(screen)
+                self.clear.display(screen)
+                self.clear_text.display(screen)
+
+                # summary
+                summary = ['']
+                if self.cur_is_mult:
+                    summary = [self.subboard_text[i].org_text for i in self.cur_mult_choose]
+                else:
+                    if self.cur_uni_choose != -1:
+                        summary = self.subboard_text[self.cur_uni_choose].org_text
+                self.update_summary(summary)
+                self.summary_text.display(screen, draw_rect=False)
             else:
-                if self.cur_uni_choose != -1:
-                    summary = self.subboard_text[self.cur_uni_choose].org_text
-            self.update_summary(summary)
-            self.summary_text.display(screen, draw_rect=False)
-
-
-class InteractBoard():
-    pass
-    # init:
-    #   x,y,w,h for the board
-    #       1/4 for summary and confirm bottom
-    #       3/4 for subboard
-    #   n SelectBoard
+                self.close.display(screen)
+                self.close_text.display(screen)

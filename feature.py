@@ -13,6 +13,7 @@ from basic_feature import *
 pg.init()
 
 
+
 class City(ImgBox):
     def __init__(self, x=0, y=0, w=10, h=10, color=BLACK, keep_active=False, to_drag=False,
                  cityname='', citycolor='', txt_up=True):
@@ -117,13 +118,14 @@ class InfectionCard():
                          h=infection_card_size[1],
                          keep_active=False, thick=0)
         area.update_color((0, 175, 0))
+        area.update_active_color(color_rbky[city.ctcolor])
         self.area = area
 
         x, y = area.rect.topleft
         area_text = WordBox(x=x, y=y,
                             w=infection_card_size[0], h=infection_card_size[1], as_rect=False)
 
-        area_text.add_text(text=city.txt, size=16, color=BLACK)
+        area_text.add_text(text=city.txt, size=16, color=color_rbky[city.ctcolor])
 
         self.name = city.txt
         self.area_text = area_text
@@ -153,7 +155,7 @@ class InfectionCard():
             return
 
     def display(self, screen):
-        self.area.display(screen, is_rect=True, active_off=True)
+        self.area.display_active(screen, thick=5)
         self.area_text.display(screen)
 
 
@@ -413,257 +415,6 @@ class GameControl():
 
 
 # ----------------------------------------------------------------------- player
-'''class subboard():
-    def __init__(self, lv=1):
-        # size and pos
-        self.x = player_control_board_pos[0] + 10 + (player_control_subtext_size[0] + 20) * lv
-        self.y = player_control_board_pos[1] + 5
-        self.w = player_control_subtext_size[0] + 10
-        self.h = player_control_subtext_size[1] - 5
-
-        subboard = [[], []]
-        self.subboard = subboard
-
-        self.subboard_title = WordBox(x=self.x, y=self.y, w=self.w, h=self.h, as_rect=False)
-        self.subboard_title.add_text(' ', size=16, color=BLACK)
-
-        self.title = ''
-
-        # maybe need to tracking system
-        self.cur_mult_subboard = set()
-        self.cur_uni_subboard = -1
-        self.cur_is_mult = False
-        self.has_active = False
-
-    def add_subtext(self, key, infos):
-        self.subboard = [[], []]
-        self.cur_mult_subboard = set()
-        self.cur_uni_subboard = -1
-        self.cur_is_mult = False
-        self.has_active = False
-
-        if key in infos:
-            self.subboard_title.add_text(text=infos[key][0], size=16, color=BLACK)
-            self.title = infos[key][0]
-
-            color, text, keep_active = infos[key][1], infos[key][2], infos[key][3]
-
-            for i in range(len(color)):
-                y_adj = (i + 1) if i < 5 else (i + 1 - 5)
-                x_adj = 0 if i < 5 else 1
-                box = SelectBox(x=self.x + self.w * x_adj, y=self.y + self.h * y_adj,
-                                w=self.w, h=self.h, keep_active=False)
-                box_text = WordBox(x=self.x + self.w * x_adj + self.w * 0.5, y=self.y + self.h * y_adj + self.h * 0.5,
-                                   w=self.w, h=self.h, keep_active=False)
-
-                box.update_color(color[i])
-                box.update_method(keep_active)
-                box_text.add_text(text[i], size=16, color=BLACK)
-
-                self.subboard[0].append(box)
-                self.subboard[1].append(box_text)
-
-    def handel_event(self, event):
-        cur_active = []
-        for i, box in enumerate(self.subboard[0]):
-            box.handle_event(event)
-            if box.active:
-                cur_active.append(i)
-                self.has_active = True
-
-        # check how many active
-        if cur_active:
-            if len(cur_active) == 1:
-                self.cur_is_mult = False
-                self.cur_uni_subboard = cur_active[0]
-            else:
-                self.cur_is_mult = True
-                self.cur_mult_subboard = set()
-                for act in cur_active:
-                    self.cur_mult_subboard.add(act)
-
-    def rtn_select(self):
-        if self.cur_is_mult:
-            rtn = []
-            if self.cur_mult_subboard:
-                for i in self.cur_mult_subboard:
-                    rtn.append(self.subboard[1][i].org_text)
-                return rtn
-        else:
-            # check if get activate
-            if self.has_active:
-                return self.subboard[1][self.cur_uni_subboard].org_text
-
-    def display(self, screen):
-        if self.title:
-            self.subboard_title.display(screen)
-
-        for i, box in enumerate(self.subboard[0]):
-            box.update_thick()
-            if self.cur_is_mult:
-                if box.active:
-                    box.update_thick(0)
-            else:
-                if box.active or i == self.cur_uni_subboard:
-                    box.update_thick(0)
-            box.display_no_active(screen)
-
-        for box in self.subboard[1]:
-            box.display(screen)
-
-
-# player control board
-class PlayerBoard():
-    def __init__(self):
-        # whole board
-        area = SelectBox(thick=0, keep_active=False)
-        area.update_color(WHITE)
-        area.update_pos(x=player_control_board_pos[0], y=player_control_board_pos[1])
-        area.update_wh(w=player_control_board_size[0], h=player_control_board_size[1])
-        self.area = area
-
-        # subtext
-        x = player_control_board_pos[0] + 10
-        y = player_control_board_pos[1] + 5
-        w, h = player_control_subtext_size
-        subtext = ['Move', 'Build Lab', 'Find Cure', 'Treat disease', 'Share info']
-        subtext_area = []
-        for i, text in enumerate(subtext):
-            box = WordBox(x=x, y=y + h * i, w=w, h=h, keep_active=False, as_rect=False)
-            box.add_text(text=text, size=16, color=BLACK)
-            subtext_area.append(box)
-        self.subtext_area = subtext_area
-
-        # subboard info
-        # key = sub text
-        # val:[title, 1st ls = color, to update select box; 2nd ls = text, update word box]
-        self.subboard1_info = {}
-        self.subboard2_info = {}
-
-        self.cur_subtext_area = ''
-
-        self.city_pick = ''
-
-    def update_city_pick(self, city):
-        self.city_pick = city
-
-    def update_subboard_info(self, players, cur_player, active_city, cities):
-        # info for update
-        city = cur_player.city
-        hand = cur_player.hand
-        hand_ls = [card.name for card in hand if card.type == 'city']
-        hand_color = [card.color for card in hand if card.type == 'city']
-
-        # compute the possible action
-        # move
-        if cur_player.move_other:
-            move_ls = [player.name for player in players]
-            move_color = [player.color for player in players]
-        else:
-            move_ls = [cur_player.name]
-            move_color = [cur_player.color]
-
-        card_to_use, card_to_use_color = [], []
-        if cur_player.city.txt in hand_ls:
-            card_to_use.append(cur_player.city.txt)
-            card_to_use_color.append(color_rbky[cur_player.city.ctcolor])
-
-        if active_city:
-            self.city_pick = active_city
-            if active_city.txt in hand_ls and active_city.txt not in card_to_use:
-                card_to_use.append(active_city.txt)
-                card_to_use_color.append(color_rbky[active_city.ctcolor])
-        elif self.city_pick:
-            if self.city_pick.txt in hand_ls and self.city_pick.txt not in card_to_use:
-                card_to_use.append(self.city_pick.txt)
-                card_to_use_color.append(color_rbky[self.city_pick.ctcolor])
-
-        self.subboard1_info['Move'] = ['Whom', move_color, move_ls, False]
-        self.subboard2_info['Move'] = ['Using Card', card_to_use_color, card_to_use, False]
-
-        # build lab
-        if cur_player.building_action:
-            build_ls = ['Yes']
-        else:
-            build_ls = ['Yes'] if city.txt in hand_ls else ['Need city card']
-
-        lab_ls = [city.txt for city in cities.values() if city.lab]
-        lab_ls_color = [color_rbky[city.ctcolor] for city in cities.values() if city.lab]
-
-        self.subboard1_info['Build Lab'] = ['Build', [WHITE], build_ls, False]
-        self.subboard2_info['Build Lab'] = ['Current Lab', lab_ls_color, lab_ls, False]
-
-        # find cure
-        if city.lab:
-            cure_color = [val for val in color_rbky.values() if hand_color.count(val) >= cur_player.cure_need]
-            cure_ls = ['cure'] * len(cure_color)
-
-            cure_card = [card.name for card in hand if card.color in cure_color]
-            cure_card_color = [card.color for card in hand if card.color in cure_color]
-        else:
-            cure_ls = ['City has no lab']
-            cure_color = [WHITE]
-            cure_card, cure_card_color = [], []
-
-        self.subboard1_info['Find Cure'] = ['Which cure', cure_color, cure_ls, False]
-        self.subboard2_info['Find Cure'] = ['Card to use', cure_card_color, cure_card, True]
-
-        # treat
-        treat_ls = [k for k, v in city.disease.items() if len(v) != 0]
-        treat_color = [color_rbky[k] for k, v in city.disease.items() if len(v) != 0]
-
-        self.subboard1_info['Treat disease'] = ['Which disease', treat_color, treat_ls, False]
-
-        # share
-        share_ppl = [player.name for player in players if player.city == city]
-        share_ppl_color = [player.color for player in players if player.city == city]
-
-        share_ppl.remove(cur_player.name)
-        share_ppl_color.remove(cur_player.color)
-
-        if not cur_player.sharelock:
-            share_card = hand_ls
-            share_card_color = hand_color
-        else:
-            share_card = [city.txt] if city.txt in hand_ls else []
-            share_card_color = [color_rbky[city.ctcolor]] if city.txt in hand_ls else []
-
-        self.subboard1_info['Share info'] = ['Whom', share_ppl_color, share_ppl, False]
-        self.subboard2_info['Share info'] = ['Which Card', share_card_color, share_card, False]
-
-    def rtn_subboard_info(self):
-        return self.subboard1_info, self.subboard2_info
-
-    def rtn_board_active(self):
-        return self.area.active
-
-    def rtn_select(self):
-        if self.cur_subtext_area:
-            return self.cur_subtext_area.org_text
-
-    def add_player_color(self, color):
-        self.area.update_active_color(color)
-        for box in self.subtext_area:
-            box.add_fill_color(color)
-
-    def handle_event(self, event):
-        self.area.handle_event(event)
-
-        for i, box in enumerate(self.subtext_area):
-            box.handle_event(event)
-
-            if box.active:
-                self.cur_subtext_area = box
-
-    def display(self, screen):
-        self.area.display_active(screen, thick=3)
-        for i, box in enumerate(self.subtext_area):
-            if not box == self.cur_subtext_area:
-                box.display(screen, draw_rect=True)
-            else:
-                box.display(screen, draw_rect=True, is_fill=True)
-
-'''
 # player control board
 class PlayerBoard():
     def __init__(self):
@@ -700,6 +451,7 @@ class PlayerBoard():
                            w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1],
                            thick=0, keep_active=False)
         bottom.update_color(SHADOW)
+        bottom.update_active_color(SHADOW)
         self.bottom = bottom
 
         bottom_text = WordBox(x=CONFIRM_bottom_pos[0] + CONFIRM_bottom_size[0] * 0.5,
@@ -708,11 +460,27 @@ class PlayerBoard():
         bottom_text.add_text(text='Confirm', color=BLACK, size=20, is_cap=False)
         self.bottom_text = bottom_text
 
+        # finish bottom
+        bottom = SelectBox(x=CONFIRM_bottom_pos[0], y=CONFIRM_bottom_pos[1]-CONFIRM_bottom_size[1]*2.5,
+                           w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1],
+                           thick=0, keep_active=False)
+        bottom.update_color(SHADOW)
+        bottom.update_active_color(SHADOW)
+        self.done_bottom = bottom
+
+        bottom_text = WordBox(x=CONFIRM_bottom_pos[0] + CONFIRM_bottom_size[0] * 0.5,
+                              y=CONFIRM_bottom_pos[1] - CONFIRM_bottom_size[1] * 1.9,
+                              w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
+        bottom_text.add_text(text='End the round', color=BLACK, size=20, is_cap=False)
+        self.done_bottom_text = bottom_text
+
         # player action left
         action_used = WordBox(x=player_board_summary_pos[0] + player_control_subtext_size[0] * 0.8,
                               y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.5, as_rect=False)
         action_used.add_text(text=' ', size=18, color=BLACK, to_center=False)
         self.action_used = action_used
+
+        self.is_close = True
 
         self.cur_subtext_area = self.subtext_area[0]
         self.city_pick = ''
@@ -759,6 +527,7 @@ class PlayerBoard():
             board.add_ls(move_ls, move_color, row_limit=5)
             board.update_default_select(True)
             board.add_title('Whom')
+            board.is_close = False
             self.subboard.append(board)
 
             # card to use
@@ -788,6 +557,7 @@ class PlayerBoard():
                                                 show_summary=False)
                             board.add_ls(card_to_use, card_to_use_color)
                             board.add_title('Card for moving')
+                            board.is_close = False
                             self.subboard.append(board)
                     else:
                         board = SelectBoard(x=player_control_board_pos[0] + adj_x * (len(self.subboard) + 1),
@@ -795,6 +565,7 @@ class PlayerBoard():
                                             show_summary=False)
                         board.add_ls(card_to_use, card_to_use_color)
                         board.add_title('Card for moving')
+                        board.is_close = False
                         self.subboard.append(board)
 
         if action == 'Build Lab':
@@ -807,7 +578,7 @@ class PlayerBoard():
                     board.add_ls([city.txt], [color_rbky[city.ctcolor]])
                     board.update_default_select(True)
                     board.add_title('Card to use')
-
+                    board.is_close = False
                     self.subboard.append(board)
 
             lab_ls = [city.txt for city in cities.values() if city.lab]
@@ -820,7 +591,7 @@ class PlayerBoard():
                                     show_summary=False)
                 board.add_ls(lab_ls, lab_ls_color)
                 board.add_title('Current Lab')
-
+                board.is_close = False
                 self.subboard.append(board)
 
         if action == 'Find Cure':
@@ -837,6 +608,7 @@ class PlayerBoard():
                                     show_summary=False)
                 board.add_ls(cure_ls, cure_color)
                 board.add_title('Type of cure')
+                board.is_close = False
                 self.subboard.add(board)
 
             board = SelectBoard(x=player_control_board_pos[0] + adj_x * (len(self.subboard) + 1),
@@ -845,6 +617,7 @@ class PlayerBoard():
                                 show_summary=False)
             board.add_ls(cure_card, cure_card_color, keep_active=True)
             board.add_title('Card to use')
+            board.is_close = False
             self.subboard.append(board)
 
         if action == 'Treat disease':
@@ -859,6 +632,7 @@ class PlayerBoard():
             board.add_ls(treat_ls, treat_color, keep_active=False)
             board.update_default_select(True)
             board.add_title('Which disease')
+            board.is_close = False
             self.subboard.append(board)
 
         if action == 'Share info':
@@ -876,6 +650,7 @@ class PlayerBoard():
             board.add_ls(share_ppl, share_ppl_color, keep_active=False)
             board.update_default_select(True)
             board.add_title('Whom')
+            board.is_close = False
             self.subboard.append(board)
 
             if not cur_player.sharelock:
@@ -891,6 +666,7 @@ class PlayerBoard():
             board.add_ls(share_card, share_card_color, keep_active=False)
             board.update_default_select(True)
             board.add_title('Which Card')
+            board.is_close = False
             self.subboard.append(board)
 
     def add_player_color(self, color):
@@ -899,156 +675,108 @@ class PlayerBoard():
             box.add_fill_color(color)
 
     def rtn_status(self):
-        rtn_board = []
-        for board in self.subboard:
-            rtn_board.append(board.rtn_select())
-
         if self.cur_subtext_area:
+            rtn_board = []
+            for board in self.subboard:
+                rtn_board.append(board.rtn_select())
+
             if self.cur_subtext_area.org_text == 'Move':
                 rtn_board[0] = self.cur_move_ppl
 
-        return [self.cur_subtext_area.org_text, rtn_board]
+            return [self.cur_subtext_area.org_text, rtn_board]
+        return '',''
 
     def rtn_active(self):
         return self.bottom.rtn_click()
 
-    def handle_event(self, event, players, cur_player, active_city, cities):
-        self.area.handle_event(event)
+    def rtn_done(self):
+        return self.done_bottom.rtn_click()
 
-        # sub_text & sub_board
-        for i, box in enumerate(self.subtext_area):
-            box.handle_event(event)
-            if box.active:
-                if box != self.cur_subtext_area or self.city_update:
-                    self.cur_subtext_area = box
-                    self.get_subboard(box.org_text, players, cur_player, self.city_pick, cities)
-            # get the subboard for that box
-            if self.subboard:
-                for board in self.subboard:
-                    board.handle_event(event)
-            # if box.active = Move, record cur_move_ppl
-            if self.cur_subtext_area:
-                if self.cur_subtext_area.org_text == 'Move':
-                    if self.subboard:
-                        if self.subboard[0].rtn_select():
-                            self.cur_move_ppl = self.subboard[0].rtn_select()
+    def handle_event(self, event, players, cur_player, cities):
+        if not self.is_close:
+            self.area.handle_event(event)
 
-        # update summary text after sub_text and sub_board updated
-        summary_body = []
-        if self.cur_subtext_area:
-            summary_body = ['Action:  ' + self.cur_subtext_area.org_text]
-            if self.cur_subtext_area.org_text == 'Move' and self.city_pick:
-                if self.cur_move_ppl:
-                    summary_body.append('Whom:  ' + self.cur_move_ppl)
-                else:
-                    summary_body.append('Whom:  ' + cur_player.name)
-                summary_body.append('To:  ' + string.capwords(self.city_pick.txt))
-
-                if len(self.subboard) > 1:
-                    body = self.subboard[1].rtn_select()
-                    if body:
-                        summary_body.append('Card to Use:  ' + body)
-
-            if self.subboard and not self.cur_subtext_area.org_text == 'Move':
-                for board in self.subboard:
-                    title = board.title
-                    body = board.rtn_select()
-                    if body:
-                        body = body if isinstance(body, list) else [body]
-                        body = [string.capwords(s) for s in body]
-                        if len(body) > 3:
-                            summary_body.append(title + ':  ' + ', '.join(body[:3]))
-                            summary_body.append('         ' + ', '.join(body[3:]))
-                        else:
-                            summary_body.append(title + ':  ' + ', '.join(body))
-        self.summary.add_body(summary_body,
-                              size=20, color=BLACK,
-                              line_space=20, indent=10, fit_size=50, n_col=1)
-
-        # confirm bottom
-        self.bottom.handle_event(event)
-
-        text = 'Player action used: ' + str(cur_player.action_used) + ' / ' + str(cur_player.action)
-        self.action_used.add_text(text=text, size=18, color=BLACK)
-
-    def display(self, screen):
-        self.area.display_active(screen, thick=3)
-        for i, box in enumerate(self.subtext_area):
-            if not box == self.cur_subtext_area:
-                box.display(screen, draw_rect=True)
-            else:
-                box.display(screen, draw_rect=True, is_fill=True)
+            # sub_text & sub_board
+            for i, box in enumerate(self.subtext_area):
+                box.handle_event(event)
+                if box.active:
+                    if box != self.cur_subtext_area or self.city_update:
+                        self.cur_subtext_area = box
+                        self.get_subboard(box.org_text, players, cur_player, self.city_pick, cities)
+                # get the subboard for that box
                 if self.subboard:
                     for board in self.subboard:
-                        board.display(screen, draw_bg=False)
+                        board.handle_event(event)
+                # if box.active = Move, record cur_move_ppl
+                if self.cur_subtext_area:
+                    if self.cur_subtext_area.org_text == 'Move':
+                        if self.subboard:
+                            if self.subboard[0].rtn_select():
+                                self.cur_move_ppl = self.subboard[0].rtn_select()
 
-        self.summary.display(screen, draw_rect=False)
-        self.bottom.display(screen)
-        self.bottom_text.display(screen)
+            # update summary text after sub_text and sub_board updated
+            summary_body = []
+            if self.cur_subtext_area:
+                summary_body = ['Action:  ' + self.cur_subtext_area.org_text]
+                if self.cur_subtext_area.org_text == 'Move' and self.city_pick:
+                    if self.cur_move_ppl:
+                        summary_body.append('Whom:  ' + self.cur_move_ppl)
+                    else:
+                        summary_body.append('Whom:  ' + cur_player.name)
+                    summary_body.append('To:  ' + string.capwords(self.city_pick.txt))
 
-        self.action_used.display(screen)
+                    if len(self.subboard) > 1:
+                        body = self.subboard[1].rtn_select()
+                        if body:
+                            summary_body.append('Card to Use:  ' + body)
 
+                if self.subboard and not self.cur_subtext_area.org_text == 'Move':
+                    for board in self.subboard:
+                        title = board.title
+                        body = board.rtn_select()
+                        if body:
+                            body = body if isinstance(body, list) else [body]
+                            body = [string.capwords(s) for s in body]
+                            if len(body) > 3:
+                                summary_body.append(title + ':  ' + ', '.join(body[:3]))
+                                summary_body.append('         ' + ', '.join(body[3:]))
+                            else:
+                                summary_body.append(title + ':  ' + ', '.join(body))
+            self.summary.add_body(summary_body,
+                                  size=20, color=BLACK,
+                                  line_space=20, indent=10, fit_size=50, n_col=1)
 
-'''# player board summary
-class PlayerBoardSummary():
-    def __init__(self):
-        # summary action
-        area_text = InfoBox(x=player_board_summary_pos[0],
-                            y=player_board_summary_pos[1])
-        area_text.add_title(' ', size=2, color=BLACK)
-        self.area_text = area_text
+            # confirm bottom
+            self.bottom.handle_event(event)
+            self.done_bottom.handle_event(event)
 
-        # confirm bottom
-        bottom = SelectBox(thick=0, keep_active=False)
-        bottom.update_color(WHITE)
-        bottom.update_pos(x=CONFIRM_bottom_pos[0], y=CONFIRM_bottom_pos[1])
-        bottom.update_wh(w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
-        self.bottom = bottom
+            text = 'Player action used: ' + str(cur_player.action_used) + ' / ' + str(cur_player.action)
+            self.action_used.add_text(text=text, size=18, color=BLACK)
 
-        bottom_text = WordBox(x=CONFIRM_bottom_pos[0] + CONFIRM_bottom_size[0] * 0.5,
-                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.6,
-                              w=CONFIRM_bottom_size[0], h=CONFIRM_bottom_size[1])
-        bottom_text.add_text(text='Confirm', color=BLACK, size=20, is_cap=False)
-        self.bottom_text = bottom_text
+    def display(self, screen, players, cur_player, cities):
+        if not self.is_close:
+            self.area.display_active(screen, thick=3)
+            for i, box in enumerate(self.subtext_area):
+                if not box == self.cur_subtext_area:
+                    box.display(screen, draw_rect=True)
 
-        self.select = False
+                else:
+                    if self.cur_subtext_area == self.subtext_area[0] and not self.subboard:
+                        self.get_subboard(box.org_text, players, cur_player, self.city_pick, cities)
 
-        # player action left
-        action_used = WordBox(x=player_board_summary_pos[0] + player_control_subtext_size[0] * 0.8,
-                              y=CONFIRM_bottom_pos[1] + CONFIRM_bottom_size[1] * 0.5, as_rect=False)
-        action_used.add_text(text=' ', size=18, color=BLACK, to_center=False)
-        self.action_used = action_used
+                    box.display(screen, draw_rect=True, is_fill=True)
+                    if self.subboard:
+                        for board in self.subboard:
+                            board.display(screen, draw_bg=False)
 
-    def add_summary(self, text):
-        self.area_text.add_title(' ', size=2, color=BLACK)
-        self.area_text.add_body(text, size=20, color=BLACK,
-                                line_space=20, indent=10, fit_size=50, n_col=1)
+            self.summary.display(screen, draw_rect=False)
+            self.bottom.display(screen)
+            self.bottom_text.display(screen)
+            self.done_bottom.display(screen)
+            self.done_bottom_text.display(screen)
 
-    def update_player_action(self, player):
-        text = 'Player action used: ' + str(player.action_used) + ' / ' + str(player.action)
-        self.action_used.add_text(text=text, size=18, color=BLACK)
+            self.action_used.display(screen)
 
-    def handel_event(self, event):
-        self.bottom.handle_event(event)
-
-    def rtn_active(self):
-        return self.bottom.active
-
-    def set_active(self, active):
-        self.bottom.active = active
-
-    def display(self, screen):
-        if self.select:
-            self.bottom.update_color(ORANGE)
-        else:
-            self.bottom.update_color(WHITE)
-
-        self.area_text.display(screen, draw_rect=False)
-        self.bottom.display(screen)
-        self.bottom_text.display(screen)
-        self.action_used.display(screen)
-
-'''
 # player
 class Player():
     def __init__(self):
@@ -1196,7 +924,7 @@ class Medic(Player):
         self.area.update_color(color_Medic)
 
         # character ability
-        self.supertreat = False
+        self.supertreat = True
 
 
 class Dispatcher(Player):

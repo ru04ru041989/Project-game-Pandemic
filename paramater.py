@@ -4,6 +4,7 @@ screen_height = 800
 bg_color = (230, 230, 230)
 
 FPS = 30
+DOUBLECLICKTIME = 500
 
 # display object setting
 # ------------------------------------
@@ -43,8 +44,8 @@ player_control_subtext_size = (120, 30)
 
 player_board_summary_size = (390, 150)
 player_board_summary_pos = (585, 635)
-CONFIRM_bottom_size = (80, 40)
-CONFIRM_bottom_pos = (900, 745)
+CONFIRM_bottom_size = (130, 40)
+CONFIRM_bottom_pos = (850, 745)
 
 # select list board
 list_board_item_size = (120, 30)
@@ -138,15 +139,9 @@ check_player = {
     'action': False
 }
 
+hand_limit = {
+    'action': False
+}
 
-'''
-some though of control the overall step
-use list(game_control.keys()) to get all the main step
-having another function / or in the each main step function
-    at the end of the process, 
-        > indicate the index of the next main step in the list
-        > ......or the key name, an use list.index(key_name) to lociate the process
 
-to do this, need a global main step indicater
 
-'''
